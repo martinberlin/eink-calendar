@@ -15,6 +15,10 @@
 
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 
+// No MORE ssid / passwords! Use wifiManager
+//const char* password = "14237187131701431551";
+// Default config mode Access point
+const char* configModeAP = "Display-autoconnect";
 // mDNS: display.local
 const char* domainName = "display"; 
 String message;
@@ -40,6 +44,17 @@ const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / 
 
 
 WiFiClient client; // wifi client object
+
+// Displays message doing a partial update
+void displayMessage(String message, int height) {
+  Serial.println("DISPLAY prints: "+message);
+  display.setTextColor(GxEPD_WHITE);
+  display.fillRect(0,0,display.width(),height,GxEPD_BLACK);
+  display.setCursor(2, 25);
+  display.print(message);
+  display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
+  display.update(); // -> Since could not make partial updateWindow work
+}
 
 void handle_http_not_found() {
   server.send(404, "text/plain", "Not Found");
@@ -136,6 +151,7 @@ void handleDisplayWrite() {
   display.update();
   server.send(200, "text/html", "Text sent to display");
 }
+
 uint16_t read16()
 {
   // BMP data is stored little-endian, same as Arduino.
@@ -156,6 +172,7 @@ uint32_t read32()
   ((uint8_t *)&result)[3] = client.read(); // MSB
   return result;
 }
+
 
 void handleWebToDisplay() {
   String url = "";
@@ -179,9 +196,9 @@ void handleWebToDisplay() {
       display.update();
       return;
     }
-  String host = "calendar.fasani.de";
-  String image = "/screenshot?u=" + url + "&z=" + zoom + "&b=" + brightness;
-  
+  String host = "api.slosarek.eu";
+  String image = "/web-image/?u=" + url + "&z=" + zoom + "&b=" + brightness;
+   
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + host + "\r\n";
@@ -226,12 +243,11 @@ while (client.available()) {
   uint16_t bmp;
   ((uint8_t *)&bmp)[0] = lastByte; // LSB
   ((uint8_t *)&bmp)[1] = clientByte; // MSB
-  /* Serial.print(bmp,HEX);Serial.print(" ");
+  Serial.print(bmp,HEX);Serial.print(" ");
   if (0 == count % 16) {
     Serial.println();
   }
-  */
-  delay(1); 
+  delay(1);
   lastByte = clientByte;
   
   if (bmp == 0x4D42) { // BMP signature
@@ -331,17 +347,6 @@ while (client.available()) {
   }     
 }
 
-// Displays message doing a partial update
-void displayMessage(String message, int height) {
-  Serial.println("DISPLAY prints: "+message);
-  display.setTextColor(GxEPD_WHITE);
-  display.fillRect(0,0,display.width(),height,GxEPD_BLACK);
-  display.setCursor(2, 25);
-  display.print(message);
-  display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
-  display.update(); // -> Since could not make partial updateWindow work
-}
-
 void loop() {
   // Add  milisec comparison to make server work for 1 min / 90 sec
   if (millis() < serverDownTime) {
@@ -359,27 +364,22 @@ void setup() {
   display.init();
   display.setRotation(2); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
-  
-  WiFi.begin("android", "fasfasnar");
+  display.setTextColor(GxEPD_BLACK);
+
+    WiFi.begin("android", "fasfasnar");
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(" . ");
     delay(500);
   }
-  Serial.println(WiFi.localIP());
+Serial.println(WiFi.localIP());
 
-  display.setTextColor(GxEPD_BLACK);
-
-  // Set up mDNS responder:
-  // - first argument is the domain name, in this example
-  //   the fully-qualified domain name is "display.local"
-  // - second argument is the IP address to advertise
   if (!MDNS.begin(domainName)) {
     Serial.println("Error setting up MDNS responder!");
     while (1) {
       delay(1000);
     }
   }
-  Serial.printf("mDNS responder started: %s.local\n", domainName);
+  Serial.printf("mDNS responder: %s.local\n",domainName);
   // Add service to MDNS-SD
   MDNS.addService("http", "tcp", 80);
   delay(500);
