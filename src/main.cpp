@@ -1,3 +1,4 @@
+#include <Config.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
@@ -11,6 +12,7 @@
 // FONT used for title / message
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
+
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://calendar.fasani.de/martin";
@@ -176,7 +178,7 @@ uint32_t read32()
 
 
 void handleWebToDisplay() {
-  String url = "";
+  String url = calendarUrl;
   String zoom = ".8";
   String brightness = "100";
   if (server.args() > 0) {
@@ -368,7 +370,7 @@ void setup() {
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
 
-    WiFi.begin("android", "fasfasnar");
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(" . ");
     delay(500);
@@ -384,7 +386,6 @@ Serial.println(WiFi.localIP());
   Serial.printf("mDNS responder: %s.local\n",domainName);
   // Add service to MDNS-SD
   MDNS.addService("http", "tcp", 80);
-  delay(500);
   
   // Start HTTP server
   server.onNotFound(handle_http_not_found);
@@ -395,4 +396,6 @@ Serial.println(WiFi.localIP());
   server.on("/display-clean", handleDisplayClean);
   server.on("/deep-sleep", handleDeepSleep);
   server.begin();
+  
+  handleWebToDisplay();
 }

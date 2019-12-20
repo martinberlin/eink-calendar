@@ -10,3 +10,8 @@ At the moment just reading events from google calendar, rendering them to a simm
 - The calendar will wake up every morning and read this screenshot
 
 There is a PHP example to do this in the directory /screenshot
+
+### Simple configuration
+
+Just rename lib/Config/Config.h.dist to COnfig.h
+and fill it with your WiFi name and password
