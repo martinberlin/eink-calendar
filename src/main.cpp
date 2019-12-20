@@ -1,7 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
-//needed for library
 #include <DNSServer.h>
 #include <WiFiClient.h>
 #include <SPI.h>
@@ -12,15 +11,17 @@
 // FONT used for title / message
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
-
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
-
-// No MORE ssid / passwords! Use wifiManager
-//const char* password = "14237187131701431551";
-// Default config mode Access point
-const char* configModeAP = "Display-autoconnect";
+// Point this to the Webpage rendering your calendar
+String calendarUrl = "http://calendar.fasani.de/martin";
+// Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
+String screenshotHost = "calendar.fasani.de";
+String screenshotPath = "/screenshot/";
+// IMPORTANT: The url to the screenshot should respond with a BMP image
+// Take care with the route since should not return a redirect or any other response than what expected
+bool debugMode = false;
 // mDNS: display.local
-const char* domainName = "display"; 
+const char* domainName = "calendar"; 
 String message;
 // Makes a div id="m" containing response message to dissapear after 3 seconds
 String javascriptFadeMessage = "<script>setTimeout(function(){document.getElementById('m').innerHTML='';},3000);</script>";
@@ -97,7 +98,7 @@ void handle_http_root() {
   html += "</select>";
 
   html += "</div></div>";
-  html += "<input placeholder='http://' id='url' name='url' type='url' class='form-control'>";
+  html += "<input placeholder='http://' id='url' name='url' type='url' class='form-control' value='"+calendarUrl+"'>";
   html += "<div class='row'><div class='col-sm-12 form-group'>";
   html += "<input type='submit' value='Website screenshot' class='btn btn-mini btn-dark'>&nbsp;";
   html += "<input type='button' onclick='document.getElementById(\"url\").value=\"\"' value='Clean url' class='btn btn-mini btn-default'></div>";
@@ -196,22 +197,21 @@ void handleWebToDisplay() {
       display.update();
       return;
     }
-  String host = "api.slosarek.eu";
-  String image = "/web-image/?u=" + url + "&z=" + zoom + "&b=" + brightness;
-   
+  
+  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness;
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
-  request += "Host: " + host + "\r\n";
+  request += "Host: " + screenshotHost + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
-  Serial.println(request);
+  Serial.println(screenshotHost+image);
 // Falta ponerle un timeout
 //  if (! client.connect(host, 80)) {
 //    Serial.println("connection failed");
 //    client.stop();
 //    return;
 //  }
-  client.connect(host, 80);
+  client.connect(screenshotHost, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -243,11 +243,13 @@ while (client.available()) {
   uint16_t bmp;
   ((uint8_t *)&bmp)[0] = lastByte; // LSB
   ((uint8_t *)&bmp)[1] = clientByte; // MSB
-  Serial.print(bmp,HEX);Serial.print(" ");
-  if (0 == count % 16) {
-    Serial.println();
+  if (debugMode) {
+    Serial.print(bmp,HEX);Serial.print(" ");
+    if (0 == count % 16) {
+      Serial.println();
+    }
+    delay(1);
   }
-  delay(1);
   lastByte = clientByte;
   
   if (bmp == 0x4D42) { // BMP signature
