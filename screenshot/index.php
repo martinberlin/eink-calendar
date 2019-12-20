@@ -5,6 +5,8 @@ use Knp\Snappy\Image;
 
 $url = isset($_GET['u']) ? $_GET['u'] : null;
 $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.8';
+
+$brightness = isset($_GET['b']) && ($_GET['b']>50 && $_GET['b']<200) ? $_GET['b'] : 100;
 $displayWidth = 640;
 $displayHeight = 384;
 
@@ -40,7 +42,9 @@ $image->setOption('width', '640');
 $image->setOption('height', '384');
 $image->setOption('zoom', $zoomFactor);
 // Set User agent (It does not work like this)
-$image->setOption('custom-header', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9) AppleWebKit/537.71 (KHTML, like Gecko) Version/7.0 Safari/537.71');
+$image->setOption('custom-header', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36');
+// Last Safari
+//$image->setOption('custom-header', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9) AppleWebKit/537.71 (KHTML, like Gecko) Version/7.0 Safari/537.71');
 $image->setOption('custom-header-propagation', true);
 $image->setOption('disable-javascript', false);
 // Initialize Imagick
@@ -58,27 +62,28 @@ try {
 
     $imageX->setImageChannelDepth(Imagick::CHANNEL_GRAY, 4);
     $imageX->setImageType(Imagick::IMGTYPE_GRAYSCALE);
-    //$out=$imageX;
     exit($imageX);
 }
 
-
-
 $imageX->readImageBlob($out);
+$saturation = 100;
+$hue = 100;
 
-/*$imageX->quantizeImage(8,                        // Number of colors  8  (8/16 for depth 4)
+$imageX->modulateImage($brightness, $saturation, $hue);
+// Not a function on ImageMagick 7.0.8-7
+//$imageX->orderedPosterizeImage("o4x4,3,3");
+
+$imageX->quantizeImage(2,     // Number of colors  
     Imagick::COLORSPACE_GRAY, // Colorspace
-    1,                        // Depth tree  16
-    TRUE,                     // Dither
-    FALSE);*/
-
-// depth 4
-$imageX->quantizeImage(8,                        // Number of colors  8  (8/16 for depth 4)
-    Imagick::COLORSPACE_GRAY, // Colorspace
-    1,                        // Depth tree  16
-    TRUE,                     // Dither
-    FALSE);
-$imageX->writeimage($filename);
-
+    8,                        // Depth tree  
+    true,                     // Dither
+    false);
+// Commenting this lines drops a 24-bit BMP
+$imageX->posterizeimage(2, false);
+try {
+  $imageX->writeimage($filename);
+} catch (Exception $exception) {
+  // Do nothing: Sometimes comes a message with filename too large.
+}
 //echo( microtime(true) - $start );
 echo $imageX;

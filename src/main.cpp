@@ -179,9 +179,9 @@ void handleWebToDisplay() {
       display.update();
       return;
     }
-  String host = "api.slosarek.eu";
-  String image = "/web-image/?u=" + url + "&z=" + zoom + "&b=" + brightness;
-   
+  String host = "calendar.fasani.de";
+  String image = "/screenshot?u=" + url + "&z=" + zoom + "&b=" + brightness;
+  
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + host + "\r\n";
@@ -226,11 +226,12 @@ while (client.available()) {
   uint16_t bmp;
   ((uint8_t *)&bmp)[0] = lastByte; // LSB
   ((uint8_t *)&bmp)[1] = clientByte; // MSB
-  Serial.print(bmp,HEX);Serial.print(" ");
+  /* Serial.print(bmp,HEX);Serial.print(" ");
   if (0 == count % 16) {
     Serial.println();
   }
-  delay(1);
+  */
+  delay(1); 
   lastByte = clientByte;
   
   if (bmp == 0x4D42) { // BMP signature
@@ -378,7 +379,7 @@ void setup() {
       delay(1000);
     }
   }
-  Serial.println("mDNS responder started");
+  Serial.printf("mDNS responder started: %s.local\n", domainName);
   // Add service to MDNS-SD
   MDNS.addService("http", "tcp", 80);
   delay(500);
