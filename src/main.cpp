@@ -19,6 +19,7 @@ String calendarUrl = "http://calendar.fasani.de/martin";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
 String screenshotHost = "calendar.fasani.de";
 String screenshotPath = "/screenshot/";
+unsigned int secondsToDeepsleep = 120;
 // IMPORTANT: The url to the screenshot should respond with a BMP image
 // Take care with the route since should not return a redirect or any other response than what expected
 bool debugMode = false;
@@ -34,11 +35,11 @@ ESP8266WebServer server(80);
 //CLK  = D8; D
 //DIN  = D7; D
 //BUSY = D6; D
-//CS   = D0; D
-//RST  = D4;
+//CS   = D1; IMPORTANT: Don't use D0 for Chip select
+//RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
 //DC   = D3;
 // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-GxIO_Class io(SPI, D0, D3, D4);
+GxIO_Class io(SPI, D1, D3, D4);
 // GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, D4, D6 );
 
@@ -359,6 +360,16 @@ void loop() {
     display.powerDown();
     ESP.deepSleep(0);
   }
+  // Note: Enable deepsleep only as last step when all the rest is working as you expect
+#ifdef DEEPSLEEP_ENABLED
+  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
+      Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
+      ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
+  }
+  secondsToDeepsleep++;
+  delay(1000);
+#endif
+
 }
 
 void setup() {
