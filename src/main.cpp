@@ -9,7 +9,7 @@
 #include <GxGDEW075T8/GxGDEW075T8.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
-// FONT used for title / message
+// FONT used for title / message body
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
@@ -27,7 +27,7 @@ const char* domainName = "calendar";
 String message;
 // Makes a div id="m" containing response message to dissapear after 3 seconds
 String javascriptFadeMessage = "<script>setTimeout(function(){document.getElementById('m').innerHTML='';},3000);</script>";
-#define SD_BUFFER_PIXELS 20 // Image example
+
 // TCP server at port 80 will respond to HTTP requests
 ESP8266WebServer server(80);
 
@@ -44,7 +44,6 @@ GxEPD_Class display(io, D4, D6 );
 
 //unsigned long  startMillis = millis();
 const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
-
 
 WiFiClient client; // wifi client object
 
@@ -369,11 +368,12 @@ void setup() {
   display.setRotation(2); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
-
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(" . ");
+  uint8_t connectTries = 0;
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED && connectTries<10) {
+    Serial.print(" .");
     delay(500);
+    connectTries++;
   }
 Serial.println(WiFi.localIP());
 
@@ -396,6 +396,9 @@ Serial.println(WiFi.localIP());
   server.on("/display-clean", handleDisplayClean);
   server.on("/deep-sleep", handleDeepSleep);
   server.begin();
-  
-  handleWebToDisplay();
+  if (WiFi.status() == WL_CONNECTED) {
+    handleWebToDisplay();
+  } else {
+    displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
+  }
 }
