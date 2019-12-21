@@ -1,14 +1,27 @@
 <?php
-require 'vendor/autoload.php';
+require './vendor/autoload.php';
 
 use Knp\Snappy\Image;
 
 $url = isset($_GET['u']) ? $_GET['u'] : null;
-$zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.8';
 
 $brightness = isset($_GET['b']) && ($_GET['b']>50 && $_GET['b']<200) ? $_GET['b'] : 100;
-$displayWidth = 640;
-$displayHeight = 384;
+
+$eink_model = isset($_GET['eink']) ? $_GET['eink'] : '';
+
+switch($eink_model) {
+  case 'GxGDEW027C44':
+   $displayWidth = 264;
+   $displayHeight = 176;
+   $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.6';
+  break;
+  default:
+   // Default values in case eink model is not received
+   $displayWidth = 640;
+   $displayHeight = 384;
+   $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.8';
+  break;
+}
 
 $cacheEnabled = false;
 $imageBasePath = './screenshots';
@@ -38,8 +51,8 @@ $image = new Image();
 $image->setBinary('/usr/local/bin/wkhtmltoimage');
 $image->setOption('disable-smart-width', true);
 $image->setOption('format', 'bmp');
-$image->setOption('width', '640');
-$image->setOption('height', '384');
+$image->setOption('width', $displayWidth);
+$image->setOption('height', $displayHeight);
 $image->setOption('zoom', $zoomFactor);
 // Set User agent (It does not work like this)
 $image->setOption('custom-header', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36');
