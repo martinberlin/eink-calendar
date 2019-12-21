@@ -1,5 +1,5 @@
 <?php
-require './vendor/autoload.php';
+require './../vendor/autoload.php';
 
 use Knp\Snappy\Image;
 
@@ -83,16 +83,17 @@ $saturation = 100;
 $hue = 100;
 
 $imageX->modulateImage($brightness, $saturation, $hue);
-// Not a function on ImageMagick 7.0.8-7
-//$imageX->orderedPosterizeImage("o4x4,3,3");
-
-$imageX->quantizeImage(2,     // Number of colors  
+// This quantize returns a 1-bit image but does not work on 2.7 display
+if ($eink_model !== 'GxGDEW027C44') {
+  $imageX->quantizeImage(2,   // Number of colors
     Imagick::COLORSPACE_GRAY, // Colorspace
     8,                        // Depth tree  
     true,                     // Dither
     false);
+}
 // Commenting this lines drops a 24-bit BMP
-$imageX->posterizeimage(2, false);
+  $imageX->posterizeimage(2, false);
+
 try {
   $imageX->writeimage($filename);
 } catch (Exception $exception) {
