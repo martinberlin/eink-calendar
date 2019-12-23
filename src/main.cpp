@@ -10,21 +10,15 @@
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 // FONT used for title / message body
+//Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
-//Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
-// Point this to the Webpage rendering your calendar
-String calendarUrl = "http://calendar.fasani.de/martin";
-// Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
-String screenshotHost = "calendar.fasani.de";
-String screenshotPath = "/screenshot/";
-unsigned int secondsToDeepsleep = 120;
-// IMPORTANT: The url to the screenshot should respond with a BMP image
-// Take care with the route since should not return a redirect or any other response than what expected
 bool debugMode = false;
-// mDNS: display.local
-const char* domainName = "calendar"; 
+
+unsigned int secondsToDeepsleep = 0;
+
+const char* domainName = "calendar"; // mDNS
 String message;
 // Makes a div id="m" containing response message to dissapear after 3 seconds
 String javascriptFadeMessage = "<script>setTimeout(function(){document.getElementById('m').innerHTML='';},3000);</script>";
@@ -364,6 +358,8 @@ void loop() {
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
       Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
+      display.powerDown();
+      delay(100);
       ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
   }
   secondsToDeepsleep++;
