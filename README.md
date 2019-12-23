@@ -46,6 +46,11 @@ Then it will be as default 5 minutes hearing if you want to send a custom screen
     ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
 
 Prepare any page that will render your calendar from any source (Google/Exchange) 
-If you need an example just ask and I will upload my google Calendar view example.
+
+### Google calendar Oauth example
+
+Please read the instructions left at [screenshot/g_calendar](https://github.com/martinberlin/eink-calendar/tree/master/screenshot) to have a very easy and configurable google calendar reader online. 
+Note that if you just want to have it at home, you don't need to put it online and public to the world, you can just keep it in a local machine or any Raspberry PI local server. 
 
 http://twitter.com/martinfasani
+

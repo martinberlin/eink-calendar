@@ -1,0 +1,1 @@
+{"access_token":"This will be generated once credentials.json is uploaded and you give the calendar authorization. Needs to have writing permissions","expires_in":3600,"scope":"https:\/\/www.googleapis.com\/auth\/calendar.readonly","token_type":"Bearer","created":1577102768,"refresh_token":""}

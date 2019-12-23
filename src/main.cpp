@@ -30,8 +30,9 @@ ESP8266WebServer server(80);
 //DIN  = D7; D
 //BUSY = D6; D
 //CS   = D1; IMPORTANT: Don't use D0 for Chip select
-//RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
 //DC   = D3;
+//RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
+
 // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
 GxIO_Class io(SPI, D1, D3, D4);
 // GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
