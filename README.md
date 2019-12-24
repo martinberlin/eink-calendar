@@ -22,8 +22,8 @@ There is a PHP example to do this in the directory /screenshot. The idea is to r
 
 ### Screenshot tool
 
-The [screenshot tool](screenshot) uses composer to fetch it's libraries. Needs some kind of server to run into, and image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
-It simply accepts as GET variables:
+The [screenshot tool](screenshot) needs a webserve with image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
+It accepts as GET variables:
 
 **u** = URL of the website you want to render
 
