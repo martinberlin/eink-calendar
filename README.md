@@ -7,22 +7,23 @@ At the moment just has 3 simple options:
 2. Renders a free title + text
 3. Cleans screen
 
-UX Preview when the Espressif is online and you access the IP address:
+UX Preview when the Espressif board is online and you access the IP address:
 ![UX Preview](screenshot/preview/calendar.local.png)
 
-If you have a Bonjour enabled mDns discovery OS like mac or linux it should be possible to access also browsing: calendar.local
+If you have an OS with Bonjour enabled multicast DNS discovery OS like mac or linux it should be possible to access also browsing: calendar.local
 
 ### Our approach to make an easy E-Ink calendar
 
 - An endpoint on the web that prints a webpage with the contents you need displayed on Eink
 - A simple screenshot to BMP endpoint
-- The calendar will wake up every morning and read this screenshot
+- The calendar will wake up every morning or every 2 hours and read this screenshot. Then it will stay in deep sleep mode, consuming 1 miliamper from the battery, until it wakes up again and repeats the loop. 
+- Only optionally it will stay connected and hear any requests for some minutes in case you need to render a custom website or a free text in the display. Otherwise it could go to sleep as soon as it renders the calendar or desired webpage.
 
 There is a PHP example to do this in the directory /screenshot
 
 ### Screenshot tool
 
-This screenshot tool uses composer to fetch it's libraries. Needs some kind of server to run into, and image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
+The [screenshot tool](screenshot) uses composer to fetch it's libraries. Needs some kind of server to run into, and image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
 It simply accepts as GET variables:
 
 **u** = URL of the website you want to render
