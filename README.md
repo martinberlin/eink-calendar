@@ -18,11 +18,11 @@ If you have an OS with Bonjour enabled multicast DNS discovery OS like mac or li
 - The Firmware driving the Eink display will wake up every morning or every 2 hours and read this screenshot. Then it will stay in deep sleep mode, consuming 1 miliamper from the battery, until it wakes up again and repeats the loop. 
 - Only optionally it will stay connected and hear any requests for some minutes in case you need to render a custom website or a free text in the display. Otherwise it could go to sleep as soon as it renders the calendar or desired webpage.
 
-There is a PHP example to do this in the directory /screenshot. The idea is to render the display and go to sleep as soon as possible to consume as little as possible and extend battery life.
+There is a PHP example to do this in the directory /screenshot. The idea is to render the display and go to sleep to consume as little as possible and extend battery life.
 
 ### Screenshot tool
 
-The [screenshot tool](screenshot) needs a webserve with image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
+The [screenshot tool](screenshot) needs a webserver with image magick installed as a PHP extension since converts the website screenshot into a BMP monochrome image.
 It accepts as GET variables:
 
 **u** = URL of the website you want to render
@@ -50,7 +50,11 @@ Then it will be as default 5 minutes hearing if you want to send a custom screen
 
     ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
 
-Prepare any page that will render your calendar from any source (Google/Exchange) 
+Prepare any page that will render your calendar from any source (Google/Exchange) or to render your favourite newspaper homepage every morning editing this String in Config:
+
+    calendarUrl
+    
+UPDATE: There will be soon a ESP32 version where you can save WiFi credentials using Bluetooth.
 
 ### Google calendar Oauth example
 
