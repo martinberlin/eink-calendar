@@ -3,7 +3,7 @@
 A very easy and straight-forward Eink calendar. 
 At the moment just has 3 simple options:
 
-1. Renders a screenshot of a webpage (Calendar if you point it to a calendar page)
+1. Renders a screenshot of a webpage. A calendar if you point it to a page rendering it's contents.
 2. Renders a free title + text
 3. Cleans screen
 
@@ -29,9 +29,11 @@ It accepts as GET variables:
 
 **z** = zoom factor (optional is 0.8 as default) Ex: .5 will scale it to 50%
 
-An example call will look like: yourwebsite.com/screenshot/?u=https//nytimes.com
+An example call will look like: 
 
-The idea is very simple, if you build a page that reads your calendar, and then point this u variable to the URL then you can refresh your Eink display with this Firmware without needing to parse any JSON or XML from C. Which can be done but is a daunting task. And this way you can also easily the design and build it with any HTML and CSS combination you desire.
+    yourwebsite.com/screenshot/?u=https://nytimes.com
+
+The idea is very simple, if you build a page that reads your calendar, and then point the u variable to that URL then you can refresh your Eink display with this Firmware without needing to parse any JSON or XML from C. Which can be done but is a daunting task. And this way you can also easily the design and build it with any HTML and CSS combination you desire.
 
 ### Simple configuration
 
@@ -50,10 +52,23 @@ Then it will be as default 5 minutes hearing if you want to send a custom screen
 
     ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
 
-Prepare any page that will render your calendar from any source (Google/Exchange) or to render your favourite newspaper homepage every morning editing this String in Config:
+Point this 2 Strings to the screenshot endpoint:
 
-    calendarUrl
-    
+    String screenshotHost = "mywebsite.com";
+    String screenshotPath = "/screenshot/";
+
+    // http://mywebsite.com/screenshot/
+
+NOTE: This screenshot endpoint should not be **https**. It's possible to read a secure connection but the Firmware should be modified to implement WiFiClientSecure and might be slower.
+
+Prepare any page that will render your calendar from any source (Google/Exchange) or to render your favourite newspaper homepage every morning and point to this page on calendarUrl variable:
+
+    String calendarUrl = "http://mywebsite.com/calendar"; // Can be https secure
+
+    // Internally the Firmware will call: http://mywebsite.com/screenshot/?u=http://mywebsite.com/calendar
+
+As you can see, the two URLs are independant and could be pointing to two different places if you desire, also both could be rendered in your local network. The Firmware does not care about this. It just expects a proper BMP image as a response.
+
 UPDATE: There will be soon a ESP32 version where you can save WiFi credentials using Bluetooth.
 
 ### Google calendar Oauth example
