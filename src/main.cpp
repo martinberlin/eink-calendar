@@ -262,14 +262,15 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     if (startFetch) {
       inBuffer[byteCount] = clientByte;
       //Serial.print(inBuffer[byteCount], HEX);Serial.print(" ");
-      delay(0);
+      #ifdef ESP8266
+      delay(1);
+      #endif
       byteCount++;
     }
     lastByte = clientByte;
     }
 
     Serial.printf("\nDone downloading compressed BMP. Length: %d\n", byteCount);
-
 
   		uint8_t *outBuffer = new uint8_t[DECOMPRESSION_BUFFER];
 			uLong uncomp_len;
