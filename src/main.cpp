@@ -1,15 +1,21 @@
 #include <Config.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266WebServer.h>
-#include <DNSServer.h>
-#include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
 #include <GxGDEW075T8/GxGDEW075T8.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
-#include <miniz.h>
+#include <miniz.c>
+#include <WiFiClient.h>
+#ifdef ESP32
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+  #include <WebServer.h>
+#elif ESP8266
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+  #include <ESP8266WebServer.h>
+#endif
+
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>
@@ -25,9 +31,16 @@ String message;
 String javascriptFadeMessage = "<script>setTimeout(function(){document.getElementById('m').innerHTML='';},3000);</script>";
 
 // TCP server at port 80 will respond to HTTP requests
-ESP8266WebServer server(80);
-#define COMPRESSION_BUFFER 8000
-#define DECOMPRESSION_BUFFER 32000
+#ifdef ESP32
+  WebServer server(80);
+  #elif ESP8266
+  ESP8266WebServer server(80);
+#endif
+
+#define COMPRESSION_BUFFER 4000
+#define DECOMPRESSION_BUFFER 40000
+
+// USE GPIO numbers for ESP32
 //CLK  = D8; D
 //DIN  = D7; D
 //BUSY = D6; D
@@ -36,9 +49,9 @@ ESP8266WebServer server(80);
 //RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
 
 // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-GxIO_Class io(SPI, D1, D3, D4);
+GxIO_Class io(SPI, 19, 23, 18);
 // GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
-GxEPD_Class display(io, D4, D6 );
+GxEPD_Class display(io, 23, 22 );
 
 //unsigned long  startMillis = millis();
 const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
@@ -175,6 +188,7 @@ uint32_t read32()
 
 
 void handleWebToDisplay() {
+  
   String url = calendarUrl;
   String zoom = ".8";
   String brightness = "100";
@@ -200,17 +214,13 @@ void handleWebToDisplay() {
   String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness +"&c=1";
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
-  request += "Host: " + screenshotHost + "\r\n";
+  request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
   Serial.println(screenshotHost+image);
-// Falta ponerle un timeout
-//  if (! client.connect(host, 80)) {
-//    Serial.println("connection failed");
-//    client.stop();
-//    return;
-//  }
-  client.connect(screenshotHost, 80);
+
+  const int httpPort = 80;
+  client.connect(screenshotHost, httpPort);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -240,7 +250,8 @@ inBuffer[byteCount] = 0x78; // zlib header[0]
 byteCount++;
 uint8_t lastByte;
 bool startFetch = false;
-Serial.print(inBuffer[0], HEX);Serial.print(" ");
+Serial.println("Zlib preview:");
+Serial.print(inBuffer[0], HEX);Serial.println(" ");
 
   while (client.available()) {
     yield();
@@ -250,13 +261,14 @@ Serial.print(inBuffer[0], HEX);Serial.print(" ");
     }
     if (startFetch) {
       inBuffer[byteCount] = clientByte;
-      //Serial.print(inBuffer[byteCount], HEX);Serial.print(" ");delay(1);
+      //Serial.print(inBuffer[byteCount], HEX);Serial.print(" ");
+      delay(0);
       byteCount++;
     }
     lastByte = clientByte;
-    }     
+    }
 
-    Serial.println("Done downloading compressed BMP");
+    Serial.printf("\nDone downloading compressed BMP. Length: %d\n", byteCount);
 
 
   		uint8_t *outBuffer = new uint8_t[DECOMPRESSION_BUFFER];
@@ -268,7 +280,7 @@ Serial.print(inBuffer[0], HEX);Serial.print(" ");
 				(const unsigned char*)inBuffer, 
 				byteCount);
     //delete(inBuffer);
-    Serial.printf("uncomp status: %d length: %ul", cmp_status, uncomp_len);
+    Serial.printf("uncomp status: %d length: %lu\n", cmp_status, uncomp_len);
     // Render BMP with outBuffer if this works
 }
 
@@ -304,7 +316,7 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<20) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<30) {
     Serial.print(" .");
     delay(500);
     connectTries++;
