@@ -175,6 +175,16 @@ uint16_t read16()
   return result;
 }
 
+uint32_t readBuffer16(uint8_t * outBuffer, long *bytePointer)
+{
+  uint32_t result;
+  long pointer = *bytePointer;
+  ((uint8_t *)&result)[0] = outBuffer[pointer]; pointer++;
+  ((uint8_t *)&result)[1] = outBuffer[pointer]; pointer++; // MSB
+  *bytePointer = pointer;
+  return result;
+}
+
 uint32_t read32()
 {
   // BMP data is stored little-endian, same as Arduino.
@@ -186,6 +196,126 @@ uint32_t read32()
   return result;
 }
 
+uint32_t readBuffer32(uint8_t * outBuffer, long *bytePointer)
+{
+  uint32_t result;
+  long pointer = *bytePointer;
+  ((uint8_t *)&result)[0] = outBuffer[pointer]; pointer++;
+  ((uint8_t *)&result)[1] = outBuffer[pointer]; pointer++;
+  ((uint8_t *)&result)[2] = outBuffer[pointer]; pointer++;
+  ((uint8_t *)&result)[3] = outBuffer[pointer]; pointer++; // MSB
+  *bytePointer = pointer;
+  return result;
+}
+
+void bmpBufferRead(uint8_t * outBuffer, long byteCount) {
+  int displayWidth = display.width();
+  int displayHeight= display.height();
+  uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
+  long bytesRead = 32;  // summing the whole BMP info headers
+  long bytePointer = 2; // Start reading after BMP signature 0x424D
+
+    uint32_t fileSize = readBuffer32(outBuffer, &bytePointer);
+    uint32_t creatorBytes = readBuffer32(outBuffer, &bytePointer);
+    uint32_t imageOffset = readBuffer32(outBuffer, &bytePointer); // Start of image data
+    uint32_t headerSize = readBuffer32(outBuffer, &bytePointer);
+    uint32_t width  = readBuffer32(outBuffer, &bytePointer);
+    uint32_t height = readBuffer32(outBuffer, &bytePointer);
+    uint16_t planes = readBuffer16(outBuffer, &bytePointer);
+    uint16_t depth = readBuffer16(outBuffer, &bytePointer); // bits per pixel
+    uint32_t format = readBuffer32(outBuffer, &bytePointer);
+
+    Serial.print("->BMP starts here. File size: "); Serial.println(fileSize);
+    Serial.print("Image Offset: "); Serial.println(imageOffset);
+    Serial.print("Header size: "); Serial.println(headerSize);
+    Serial.print("Width * Height: "); Serial.print(String(width) + " x " + String(height));
+    Serial.print(" / Bit Depth: "); Serial.println(depth);
+    Serial.print("Planes: "); Serial.println(planes);Serial.print("Format: "); Serial.println(format);
+    
+    if ((planes == 1) && (format == 0 || format == 3)) { // uncompressed is handled
+      // Attempt to move pointer where image starts
+      bytePointer = imageOffset-bytesRead; 
+      size_t buffidx = sizeof(buffer); // force buffer load
+      
+      for (uint16_t row = 0; row < height; row++) // for each line
+      {
+        //delay(1); // May help to avoid Wdt reset
+        uint8_t bits;
+        for (uint16_t col = 0; col < width; col++) // for each pixel
+        {
+          yield();
+          // Time to read more pixel data?
+          if (buffidx >= sizeof(buffer))
+          {
+            
+            //TODO: Check if this assumption is correct, replaces old streaming read:
+            //client.readBytes(buffer, sizeof(buffer));
+             for(unsigned i = 0; i<sizeof(buffer); i++){
+               buffer[i] = outBuffer[bytePointer];
+               bytePointer++;
+               //Serial.print(buffer[i], HEX);Serial.print(" ");
+             }
+            buffidx = 0; // Set index to beginning
+
+            Serial.printf("ReadBuffer Row: %d bytePointer: %d bytesRead: %d\n",row,bytePointer,bytesRead);
+          }
+          switch (depth)
+          {
+            case 1: // one bit per pixel b/w format
+              {
+                if (0 == col % 8)
+                {
+                  bits = buffer[buffidx++];
+                  bytesRead++;
+                }
+                uint16_t bw_color = bits & 0x80 ? GxEPD_WHITE : GxEPD_BLACK;
+                display.drawPixel(col, displayHeight-row, bw_color);
+                bits <<= 1;
+              }
+              break;
+              
+            case 4: // was a hard work to get here
+              {
+                if (0 == col % 2) {
+                  bits = buffer[buffidx++];
+                  bytesRead++;
+                }   
+                bits <<= 1;           
+                bits <<= 1;
+                uint16_t bw_color = bits > 0x80 ? GxEPD_WHITE : GxEPD_BLACK;
+                display.drawPixel(col, displayHeight-row, bw_color);
+                bits <<= 1;
+                bits <<= 1;
+              }
+              break;
+              
+             case 24: // standard BMP format
+              {
+                uint16_t b = buffer[buffidx++];
+                uint16_t g = buffer[buffidx++];
+                uint16_t r = buffer[buffidx++];
+                uint16_t bw_color = ((r + g + b) / 3 > 0xFF  / 2) ? GxEPD_WHITE : GxEPD_BLACK;
+                display.drawPixel(col, displayHeight-row, bw_color);
+                bytesRead = bytesRead +3;
+              }
+          }
+        } // end pixel
+      } // end line
+
+       server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
+       Serial.printf("Bytes read: %d bytePointer: %d\n", bytesRead, bytePointer);
+       display.update();
+       client.stop();
+       return; // Get out
+       
+    } else {
+      server.send(200, "text/html", "<div id='m'>Unsupported image format (depth:"+String(depth)+")</div>"+javascriptFadeMessage);
+      display.setCursor(10, 43);
+      display.print("Compressed BMP files are not handled. Unsupported image format (depth:"+String(depth)+")");
+      display.update();
+      
+    }
+} 
 
 void handleWebToDisplay() {
   int milliIni = millis();
@@ -235,12 +365,6 @@ void handleWebToDisplay() {
     }
   }
   
-  int displayWidth = display.width();
-  int displayHeight= display.height();// Not used now
-  uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-
-  long bytesRead = 32; // summing the whole BMP info headers
-
  // NOTE: No need to discard headers anymore, unless they contain 0x4D42
 long byteCount = 0; // Byte counter
 
@@ -281,9 +405,15 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
 				&uncomp_len, 
 				(const unsigned char*)inBuffer, 
 				byteCount);
-    //delete(inBuffer);
-    Serial.printf("uncomp status: %d length: %lu millisDownload: %d millisDecomp: %d \n", cmp_status, uncomp_len, milliDecomp-milliIni, millis()-milliDecomp);
+    delete(inBuffer);
+    Serial.printf("uncompress status: %d length: %lu millisDownload: %d millisDecomp: %d \n", cmp_status, uncomp_len, milliDecomp-milliIni, millis()-milliDecomp);
     // Render BMP with outBuffer if this works
+    if (cmp_status == 0) {
+       bmpBufferRead(outBuffer,uncomp_len);
+    } else {
+      Serial.printf("uncompress status: %d Decompression error\n", cmp_status);
+    }
+    delete(outBuffer);
 }
 
 void loop() {
@@ -347,7 +477,8 @@ Serial.println(WiFi.localIP());
   if (WiFi.status() == WL_CONNECTED) {
     handleWebToDisplay();
   } else {
-    displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
+    //displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
+    Serial.printf("Please check your credentials in Config.h\nCould not connect to %s\n", WIFI_SSID);
     delay(1000);
     ESP.restart();
   }
