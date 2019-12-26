@@ -11,6 +11,11 @@ UX Preview when the Espressif board is online and you access the IP address:
 ![UX Preview](screenshot/preview/calendar.local.png)
 
 If you have an OS with Bonjour enabled multicast DNS discovery OS like mac or linux it should be possible to access also browsing: calendar.local
+#### ESP32 wiring suggestion
+
+    mapping suggestion for ESP32, e.g. LOLIN32, see .../variants/.../pins_arduino.h for your board
+    BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)
+    CLK -> SCK(18), DIN -> MOSI(23)
 
 ### Our approach to make an easy E-Ink calendar
 
