@@ -1,9 +1,15 @@
 #include <WString.h>
-#define WIFI_SSID "Your WiFi Name"
-#define WIFI_PASS ""
+const char* WIFI_SSID = "Your WiFi Name";
+const char* WIFI_PASS = "";
+
+// Deepsleep configuration
+#define DEEPSLEEP_ENABLED
+#define DEEPSLEEP_SECONDS 3600
+// ESP server will be online for: 
+#define SLEEP_AFTER_SECONDS 60 
 
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
-String screenshotHost = "mywebsite.com";
+const char* screenshotHost = "mywebsite.com";
 String screenshotPath = "/screenshot/";

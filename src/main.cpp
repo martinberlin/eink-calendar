@@ -53,9 +53,6 @@ GxIO_Class io(SPI, 19, 23, 18);
 // GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, 23, 22 );
 
-//unsigned long  startMillis = millis();
-const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
-
 WiFiClient client; // wifi client object
 
 // Displays message doing a partial update
@@ -208,7 +205,7 @@ uint32_t readBuffer32(uint8_t * outBuffer, long *bytePointer)
   return result;
 }
 
-void bmpBufferRead(uint8_t * outBuffer, long byteCount) {
+bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
   int displayWidth = display.width();
   int displayHeight= display.height();
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
@@ -253,11 +250,10 @@ void bmpBufferRead(uint8_t * outBuffer, long byteCount) {
              for(unsigned i = 0; i<sizeof(buffer); i++){
                buffer[i] = outBuffer[bytePointer];
                bytePointer++;
-               //Serial.print(buffer[i], HEX);Serial.print(" ");
              }
             buffidx = 0; // Set index to beginning
 
-            Serial.printf("ReadBuffer Row: %d bytePointer: %d bytesRead: %d\n",row,bytePointer,bytesRead);
+            //Serial.printf("ReadBuffer Row: %d bytePointer: %d bytesRead: %d\n",row,bytePointer,bytesRead);
           }
           switch (depth)
           {
@@ -303,17 +299,17 @@ void bmpBufferRead(uint8_t * outBuffer, long byteCount) {
       } // end line
 
        server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
-       Serial.printf("Bytes read: %d bytePointer: %d\n", bytesRead, bytePointer);
+       Serial.printf("BMP sent to display. Bytes read: %d\n", bytesRead);
        display.update();
        client.stop();
-       return; // Get out
+       return true;
        
     } else {
       server.send(200, "text/html", "<div id='m'>Unsupported image format (depth:"+String(depth)+")</div>"+javascriptFadeMessage);
       display.setCursor(10, 43);
       display.print("Compressed BMP files are not handled. Unsupported image format (depth:"+String(depth)+")");
       display.update();
-      
+      return false;
     }
 } 
 
@@ -385,7 +381,6 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     }
     if (startFetch) {
       inBuffer[byteCount] = clientByte;
-      //Serial.print(inBuffer[byteCount], HEX);Serial.print(" ");
       #ifdef ESP8266
       delay(1);
       #endif
@@ -394,7 +389,7 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     lastByte = clientByte;
     }
 
-    Serial.printf("\nDone downloading compressed BMP. Length: %d\n", byteCount);
+    //Serial.printf("\nDone downloading compressed BMP. Length: %d\n", byteCount);
     
     int milliDecomp = millis();
   		uint8_t *outBuffer = new uint8_t[DECOMPRESSION_BUFFER];
@@ -408,30 +403,26 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     delete(inBuffer);
     Serial.printf("uncompress status: %d length: %lu millisDownload: %d millisDecomp: %d \n", cmp_status, uncomp_len, milliDecomp-milliIni, millis()-milliDecomp);
     // Render BMP with outBuffer if this works
+    bool isRendered = 0;
     if (cmp_status == 0) {
-       bmpBufferRead(outBuffer,uncomp_len);
+      isRendered = bmpBufferRead(outBuffer,uncomp_len);
     } else {
       Serial.printf("uncompress status: %d Decompression error\n", cmp_status);
     }
+    Serial.printf("Eink isRendered: %d\n", isRendered);
     delete(outBuffer);
 }
 
 void loop() {
-  // Add  milisec comparison to make server work for 1 min / 90 sec
-  if (millis() < serverDownTime) {
-    server.handleClient();
-  } else {
-    Serial.println(" Server going down");
-    display.powerDown();
-    ESP.deepSleep(0);
-  }
+ server.handleClient();
+
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
       Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
       display.powerDown();
       delay(100);
-      ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
+      ESP.deepSleep(1000000 * DEEPSLEEP_SECONDS); // Expects microseconds
   }
   secondsToDeepsleep++;
   delay(1000);
@@ -446,6 +437,7 @@ void setup() {
   display.setRotation(2); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
+
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED && connectTries<30) {
