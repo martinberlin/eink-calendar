@@ -198,10 +198,10 @@ void handleWebToDisplay() {
   String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness;
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
-  request += "Host: " + screenshotHost + "\r\n";
+  request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
-  Serial.println(screenshotHost+image);
+  Serial.println(String(screenshotHost)+image);
 // Falta ponerle un timeout
 //  if (! client.connect(host, 80)) {
 //    Serial.println("connection failed");
@@ -284,6 +284,7 @@ while (client.available()) {
           {
             client.readBytes(buffer, sizeof(buffer));
             buffidx = 0; // Set index to beginning
+            //Serial.printf("ReadBuffer Row: %d bytesRead: %d\n",row,bytesRead);
           }
           switch (depth)
           {
@@ -408,5 +409,8 @@ Serial.println(WiFi.localIP());
     handleWebToDisplay();
   } else {
     displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
+    Serial.printf("Please check your credentials in Config.h\nCould not connect to %s\n",WIFI_SSID);
+    delay(1000);
+    ESP.restart();
   }
 }

@@ -5,5 +5,5 @@
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
-String screenshotHost = "mywebsite.com";
+const char* screenshotHost = "mywebsite.com";
 String screenshotPath = "/screenshot/";
