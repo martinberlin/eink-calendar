@@ -188,7 +188,7 @@ uint32_t read32()
 
 
 void handleWebToDisplay() {
-  
+  int milliIni = millis();
   String url = calendarUrl;
   String zoom = ".8";
   String brightness = "100";
@@ -271,7 +271,8 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     }
 
     Serial.printf("\nDone downloading compressed BMP. Length: %d\n", byteCount);
-
+    
+    int milliDecomp = millis();
   		uint8_t *outBuffer = new uint8_t[DECOMPRESSION_BUFFER];
 			uLong uncomp_len;
 			
@@ -281,7 +282,7 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
 				(const unsigned char*)inBuffer, 
 				byteCount);
     //delete(inBuffer);
-    Serial.printf("uncomp status: %d length: %lu\n", cmp_status, uncomp_len);
+    Serial.printf("uncomp status: %d length: %lu millisDownload: %d millisDecomp: %d \n", cmp_status, uncomp_len, milliDecomp-milliIni, millis()-milliDecomp);
     // Render BMP with outBuffer if this works
 }
 
@@ -347,5 +348,7 @@ Serial.println(WiFi.localIP());
     handleWebToDisplay();
   } else {
     displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
+    delay(1000);
+    ESP.restart();
   }
 }
