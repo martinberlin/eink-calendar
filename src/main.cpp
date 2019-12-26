@@ -297,11 +297,10 @@ bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
           }
         } // end pixel
       } // end line
-
-       server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
-       Serial.printf("BMP sent to display. Bytes read: %d\n", bytesRead);
+       // Uncomment to send answer, trying to make it faster not delivering this on calendar update
+       //server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
        display.update();
-       client.stop();
+       Serial.printf("Read %d bytes. Sending BMP pixels to display\n", bytesRead);
        return true;
        
     } else {
@@ -400,16 +399,20 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
 				&uncomp_len, 
 				(const unsigned char*)inBuffer, 
 				byteCount);
+
+    int millisAfterDecomp = millis();
     delete(inBuffer);
-    Serial.printf("uncompress status: %d length: %lu millisDownload: %d millisDecomp: %d \n", cmp_status, uncomp_len, milliDecomp-milliIni, millis()-milliDecomp);
+    
     // Render BMP with outBuffer if this works
+    Serial.printf("uncompress_status: %d\n", cmp_status);
     bool isRendered = 0;
     if (cmp_status == 0) {
       isRendered = bmpBufferRead(outBuffer,uncomp_len);
     } else {
       Serial.printf("uncompress status: %d Decompression error\n", cmp_status);
     }
-    Serial.printf("Eink isRendered: %d\n", isRendered);
+    Serial.printf("Length uncompressed: %lu Eink isRendered: %d BENCHMARKS:\n", uncomp_len, isRendered);
+    Serial.printf("Download: %d ms Decompress: %d ms Rendering: %lu seconds\n", milliDecomp-milliIni, millisAfterDecomp-milliDecomp, (millis()-millisAfterDecomp)/1000 );
     delete(outBuffer);
 }
 
@@ -422,7 +425,7 @@ void loop() {
       Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
       display.powerDown();
       delay(100);
-      ESP.deepSleep(1000000 * DEEPSLEEP_SECONDS); // Expects microseconds
+      ESP.deepSleep(DEEPSLEEP_SECONDS*1000000ULL); // Expects microseconds
   }
   secondsToDeepsleep++;
   delay(1000);
