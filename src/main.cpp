@@ -173,6 +173,7 @@ uint32_t read32()
 
 
 void handleWebToDisplay() {
+  int millisIni = millis();
   String url = calendarUrl;
   String zoom = ".8";
   String brightness = "100";
@@ -250,6 +251,7 @@ while (client.available()) {
   lastByte = clientByte;
   
   if (bmp == 0x4D42) { // BMP signature
+    int millisBmp = millis();
     uint32_t fileSize = read32();
     uint32_t creatorBytes = read32();
     uint32_t imageOffset = read32(); // Start of image data
@@ -328,10 +330,13 @@ while (client.available()) {
           }
         } // end pixel
       } // end line
-
+      int millisEnd = millis();
        server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
-       Serial.println("Bytes read:"+ String(bytesRead));
+
+       Serial.printf("Bytes read: %lu BMP headers detected: %lu ms. BMP total fetch: %d ms.  Total download: %lu ms\n",bytesRead,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+
        display.update();
+       Serial.printf("display.update() render: %d ms.\n", millis()-millisEnd);
        client.stop();
        break;
        
