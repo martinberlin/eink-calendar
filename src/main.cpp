@@ -1,14 +1,19 @@
 #include <Config.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266WebServer.h>
-#include <DNSServer.h>
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
 #include <GxGDEW075T8/GxGDEW075T8.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
+#ifdef ESP32
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+  #include <WebServer.h>
+#elif ESP8266
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+  #include <ESP8266WebServer.h>
+#endif
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>
@@ -24,7 +29,11 @@ String message;
 String javascriptFadeMessage = "<script>setTimeout(function(){document.getElementById('m').innerHTML='';},3000);</script>";
 
 // TCP server at port 80 will respond to HTTP requests
-ESP8266WebServer server(80);
+#ifdef ESP32
+  WebServer server(80);
+  #elif ESP8266
+  ESP8266WebServer server(80);
+#endif
 
 //CLK  = D8; D
 //DIN  = D7; D
@@ -33,11 +42,15 @@ ESP8266WebServer server(80);
 //DC   = D3;
 //RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
 
-// GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-GxIO_Class io(SPI, D1, D3, D4);
-// GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
-GxEPD_Class display(io, D4, D6 );
-
+#ifdef ESP32
+  GxIO_Class io(SPI, 5, 17, 16);
+  GxEPD_Class display(io, 16, 4);
+  #elif ESP8266
+  // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
+  GxIO_Class io(SPI, D1, D3, D4);
+  // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
+  GxEPD_Class display(io, D4, D6 );
+#endif
 //unsigned long  startMillis = millis();
 const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
 
@@ -203,18 +216,12 @@ void handleWebToDisplay() {
   request += "Connection: close\r\n";
   request += "\r\n";
   Serial.println(String(screenshotHost)+image);
-// Falta ponerle un timeout
-//  if (! client.connect(host, 80)) {
-//    Serial.println("connection failed");
-//    client.stop();
-//    return;
-//  }
+
   client.connect(screenshotHost, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
   
-  uint32_t startTime = millis();
   unsigned long timeout = millis();
   while (client.available() == 0) {
     if (millis() - timeout > 5000) {
@@ -227,16 +234,13 @@ void handleWebToDisplay() {
   int displayWidth = display.width();
   int displayHeight= display.height();// Not used now
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-
   long bytesRead = 32; // summing the whole BMP info headers
+  long count = 0;
+  uint8_t lastByte = 0x00;
 
- // NOTE: No need to discard headers anymore, unless they contain 0x4D42
-long count = 0;
-uint8_t lastByte;
 // Start reading bits
 while (client.available()) {
   count++;
-  
   uint8_t clientByte = client.read();
   uint16_t bmp;
   ((uint8_t *)&bmp)[0] = lastByte; // LSB
@@ -253,7 +257,7 @@ while (client.available()) {
   if (bmp == 0x4D42) { // BMP signature
     int millisBmp = millis();
     uint32_t fileSize = read32();
-    uint32_t creatorBytes = read32();
+    read32(); // creatorBytes
     uint32_t imageOffset = read32(); // Start of image data
     uint32_t headerSize = read32();
     uint32_t width  = read32();
@@ -277,7 +281,7 @@ while (client.available()) {
       for (uint16_t row = 0; row < height; row++) // for each line
       {
         //delay(1); // May help to avoid Wdt reset
-        uint8_t bits;
+        uint8_t bits = 0;
         for (uint16_t col = 0; col < width; col++) // for each pixel
         {
           yield();
@@ -333,10 +337,10 @@ while (client.available()) {
       int millisEnd = millis();
        server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
 
-       Serial.printf("Bytes read: %lu BMP headers detected: %lu ms. BMP total fetch: %d ms.  Total download: %lu ms\n",bytesRead,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+       Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",bytesRead,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
 
        display.update();
-       Serial.printf("display.update() render: %d ms.\n", millis()-millisEnd);
+       Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
        client.stop();
        break;
        
