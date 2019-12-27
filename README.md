@@ -13,7 +13,8 @@ UX Preview when the Espressif board is online and you access the IP address:
 If you have an OS with Bonjour enabled multicast DNS discovery OS like mac or linux it should be possible to access also browsing: calendar.local
 #### ESP32 wiring suggestion
 
-    mapping suggestion for ESP32, e.g. LOLIN32, see .../variants/.../pins_arduino.h for your board
+Mapping suggestion for ESP32, e.g. LOLIN32:
+
     BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)
     CLK -> SCK(18), DIN -> MOSI(23)
 

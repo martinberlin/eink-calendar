@@ -49,9 +49,9 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
 //RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
 
 // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-GxIO_Class io(SPI, 19, 23, 18);
+GxIO_Class io(SPI, 5, 17, 16);
 // GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
-GxEPD_Class display(io, 23, 22 );
+GxEPD_Class display(io, 16, 4);
 
 WiFiClient client; // wifi client object
 
@@ -367,7 +367,7 @@ long byteCount = 0; // Byte counter
 uint8_t *inBuffer = new uint8_t[COMPRESSION_BUFFER];
 inBuffer[byteCount] = 0x78; // zlib header[0]
 byteCount++;
-uint8_t lastByte;
+uint8_t lastByte = 0x00;
 bool startFetch = false;
 Serial.println("Zlib preview:");
 Serial.print(inBuffer[0], HEX);Serial.println(" ");
