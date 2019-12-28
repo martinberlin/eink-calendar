@@ -35,22 +35,19 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-//CLK  = D8; D
-//DIN  = D7; D
-//BUSY = D6; D
-//CS   = D1; IMPORTANT: Don't use D0 for Chip select
-//DC   = D3;
-//RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
+/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
+CLK  = D8; D
+DIN  = D7; D
+BUSY = D6; D
+CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select
+DC   = D3;
+RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
+*/
+// SPI interface GPIOs defined in Config.h  
+GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
+// (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
+GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
-#ifdef ESP32
-  GxIO_Class io(SPI, 5, 17, 16);
-  GxEPD_Class display(io, 16, 4);
-  #elif ESP8266
-  // GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-  GxIO_Class io(SPI, D1, D3, D4);
-  // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
-  GxEPD_Class display(io, D4, D6 );
-#endif
 //unsigned long  startMillis = millis();
 const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
 

@@ -2,6 +2,13 @@
 #define WIFI_SSID "Your WiFi Name"
 #define WIFI_PASS ""
 
+// E-ink SPI
+// ESP8266          |  ESP32 in comments
+int8_t EINK_CS = 5;    // GPIO 5
+int8_t EINK_DC = 0;    // 17
+int8_t EINK_RST = 2;   // 16
+int8_t EINK_BUSY = 12; // 4
+
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
