@@ -9,6 +9,15 @@ int8_t EINK_DC = 0;    // 17
 int8_t EINK_RST = 2;   // 16
 int8_t EINK_BUSY = 12; // 4
 
+/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
+CLK  = D8;
+DIN  = D7;
+BUSY = D6;
+CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select since it can be used to wake up from deepsleep connected to RST
+DC   = D3;
+RST  = D4; 
+*/
+
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)

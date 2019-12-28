@@ -35,21 +35,10 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
-CLK  = D8; D
-DIN  = D7; D
-BUSY = D6; D
-CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select
-DC   = D3;
-RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
-*/
 // SPI interface GPIOs defined in Config.h  
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
-
-//unsigned long  startMillis = millis();
-const unsigned long  serverDownTime = millis() + 60 * 60 * 1000; // Min / Sec / Millis Delay between updates, in milliseconds, WU allows 500 requests per-day maximum, set to every 10-mins or 144/day
 
 WiFiClient client; // wifi client object
 
@@ -354,14 +343,8 @@ while (client.available()) {
 }
 
 void loop() {
-  // Add  milisec comparison to make server work for 1 min / 90 sec
-  if (millis() < serverDownTime) {
-    server.handleClient();
-  } else {
-    Serial.println(" Server going down");
-    display.powerDown();
-    ESP.deepSleep(0);
-  }
+  server.handleClient();
+
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
