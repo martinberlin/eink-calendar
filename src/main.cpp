@@ -37,8 +37,8 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-#define COMPRESSION_BUFFER 4000
-#define DECOMPRESSION_BUFFER 40000
+#define COMPRESSION_BUFFER 400
+#define DECOMPRESSION_BUFFER 4000
 
 // USE GPIO numbers for ESP32
 //CLK  = D8; D
@@ -336,7 +336,7 @@ void handleWebToDisplay() {
       return;
     }
   
-  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness +"&c=1";
+  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness +"&c=1&eink=GDEW042T2";
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
