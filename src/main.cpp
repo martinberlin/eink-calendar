@@ -1,11 +1,15 @@
+// Miniz zlib: Discard parts that we do not use:
+#define MINIZ_NO_ARCHIVE_APIS
+#define MINIZ_NO_STDIO
+#include "miniz.c"
 #include <Config.h>
 #include <SPI.h>
 #include <GxEPD.h>
 #include <GxGDEW075T8/GxGDEW075T8.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
-#include <miniz.c>
 #include <WiFiClient.h>
+
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
@@ -37,8 +41,8 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-#define COMPRESSION_BUFFER 400
-#define DECOMPRESSION_BUFFER 4000
+#define COMPRESSION_BUFFER 3000
+#define DECOMPRESSION_BUFFER 16000
 
 // USE GPIO numbers for ESP32
 //CLK  = D8; D
@@ -213,7 +217,7 @@ bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
   long bytePointer = 2; // Start reading after BMP signature 0x424D
 
     uint32_t fileSize = readBuffer32(outBuffer, &bytePointer);
-    uint32_t creatorBytes = readBuffer32(outBuffer, &bytePointer);
+    readBuffer32(outBuffer, &bytePointer);
     uint32_t imageOffset = readBuffer32(outBuffer, &bytePointer); // Start of image data
     uint32_t headerSize = readBuffer32(outBuffer, &bytePointer);
     uint32_t width  = readBuffer32(outBuffer, &bytePointer);
@@ -300,7 +304,7 @@ bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
        // Uncomment to send answer, trying to make it faster not delivering this on calendar update
        //server.send(200, "text/html", "<div id='m'>Image sent to display</div>"+javascriptFadeMessage);
        display.update();
-       Serial.printf("Read %d bytes. Sending BMP pixels to display\n", bytesRead);
+       Serial.printf("Read %lu bytes. Sending BMP pixels to display\n", bytesRead);
        return true;
        
     } else {
@@ -393,25 +397,28 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     int milliDecomp = millis();
   		uint8_t *outBuffer = new uint8_t[DECOMPRESSION_BUFFER];
 			uLong uncomp_len;
-			
-			int cmp_status = uncompress(
-				outBuffer, 
-				&uncomp_len, 
-				(const unsigned char*)inBuffer, 
-				byteCount);
+
+    // status: { MZ_OK = 0, MZ_STREAM_END = 1, MZ_NEED_DICT = 2, MZ_ERRNO = -1, MZ_STREAM_ERROR = -2, 
+    //           MZ_DATA_ERROR = -3, MZ_MEM_ERROR = -4, MZ_BUF_ERROR = -5, MZ_VERSION_ERROR = -6, MZ_PARAM_ERROR = -10000 };
+
+    int cmp_status = uncompress(
+      outBuffer, 
+      &uncomp_len, 
+      (const unsigned char*)inBuffer, 
+      byteCount);
 
     int millisAfterDecomp = millis();
     delete(inBuffer);
     
     // Render BMP with outBuffer if this works
-    Serial.printf("uncompress_status: %d\n", cmp_status);
+    Serial.printf("uncompress_status: %d Compressed length: %lu\n", cmp_status, byteCount);
     bool isRendered = 0;
     if (cmp_status == 0) {
       isRendered = bmpBufferRead(outBuffer,uncomp_len);
     } else {
       Serial.printf("uncompress status: %d Decompression error\n", cmp_status);
     }
-    Serial.printf("Length uncompressed: %lu Eink isRendered: %d BENCHMARKS:\n", uncomp_len, isRendered);
+    Serial.printf("Eink isRendered: %d BENCHMARKS:\n", isRendered);
     Serial.printf("Download: %d ms Decompress: %d ms Rendering: %lu seconds\n", milliDecomp-milliIni, millisAfterDecomp-milliDecomp, (millis()-millisAfterDecomp)/1000 );
     delete(outBuffer);
 }
