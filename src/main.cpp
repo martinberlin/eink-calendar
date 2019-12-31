@@ -409,8 +409,8 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
     int millisAfterDecomp = millis();
     delete(inBuffer);
     
-    // Render BMP with outBuffer if this works
-    Serial.printf("uncompress_status: %d Compressed length: %lu\n", cmp_status, byteCount);
+    // Render BMP with outBuffer if this works. freeHeap: 204984 without bluetooth
+    Serial.printf("uncompress_status: %d Compressed length: %lu freeHeap: %d\n", cmp_status, byteCount, ESP.getFreeHeap());
     bool isRendered = 0;
     if (cmp_status == 0) {
       isRendered = bmpBufferRead(outBuffer,uncomp_len);
