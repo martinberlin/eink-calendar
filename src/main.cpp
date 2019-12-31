@@ -353,8 +353,7 @@ void handleWebToDisplay() {
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
-  
-  uint32_t startTime = millis();
+
   unsigned long timeout = millis();
   while (client.available() == 0) {
     if (millis() - timeout > 5000) {
