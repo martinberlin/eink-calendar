@@ -3,12 +3,14 @@
 #define WIFI_PASS ""
 
 // E-ink SPI
-// ESP8266          |  ESP32 in comments
-int8_t EINK_CS = 5;    // GPIO 5
+// ESP8266          |  ESP32 GPIO in comments
+int8_t EINK_CS = 5;    // 5
 int8_t EINK_DC = 0;    // 17
 int8_t EINK_RST = 2;   // 16
 int8_t EINK_BUSY = 12; // 4
 
+
+String EINKMODEL = "GxGDEW075T7";
 /* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
 CLK  = D8;
 DIN  = D7;

@@ -2,7 +2,8 @@
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
-#include <GxGDEW075T8/GxGDEW075T8.cpp>
+// Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
+#include <GxGDEW075T7/GxGDEW075T7.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 #ifdef ESP32
@@ -195,7 +196,7 @@ void handleWebToDisplay() {
       return;
     }
   
-  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness;
+  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness + "&eink=" + EINKMODEL;
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
@@ -394,6 +395,7 @@ Serial.println(WiFi.localIP());
   server.on("/display-clean", handleDisplayClean);
   server.on("/deep-sleep", handleDeepSleep);
   server.begin();
+  delay(50);
   if (WiFi.status() == WL_CONNECTED) {
     handleWebToDisplay();
   } else {

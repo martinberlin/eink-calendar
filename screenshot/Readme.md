@@ -47,6 +47,11 @@ You can add your model to the case using this example and customize the width/he
 As default when no **eink** parameter comes returns a 640*384 image. 
 Feel free to expand this and your Eink display size. We prefer not to do it ourselves since we don't have all the models to test the output.
 
+## Compression test
+
+compress.php has a version that was prepared to compress the BMP image using Zlib. Is only though to be used in the ESP32 since the ESP8266 (At least the Wemos D1 has too little memory for decompression)
+In the ESP8266 I could only decompress 4 Kb maximum. So this compress php example is just left there as a "proof of concept" on how to do compression in the backend side.
+
 ## Google calendar example
 
 An example to render a dynamic google calendar is on the **g_calendar** directory along with instructions. 
