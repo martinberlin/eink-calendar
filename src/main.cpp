@@ -5,7 +5,8 @@
 #include <Config.h>
 #include <SPI.h>
 #include <GxEPD.h>
-#include <GxGDEW075T8/GxGDEW075T8.cpp>
+// Please check what is the right one for your Display: https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
+#include <GxGDEW075T7/GxGDEW075T7.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 #include <WiFiClient.h>
@@ -41,8 +42,8 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-#define COMPRESSION_BUFFER 3000
-#define DECOMPRESSION_BUFFER 16000
+#define COMPRESSION_BUFFER 5000
+#define DECOMPRESSION_BUFFER 49000
 
 // USE GPIO numbers for ESP32
 //CLK  = D8; D
@@ -340,7 +341,7 @@ void handleWebToDisplay() {
       return;
     }
   
-  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness +"&c=1&eink=GDEW042T2";
+  String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness +"&c=1&eink="+EINKMODEL;
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";

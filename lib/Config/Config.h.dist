@@ -2,6 +2,16 @@
 const char* WIFI_SSID = "Your WiFi Name";
 const char* WIFI_PASS = "";
 
+
+// E-ink SPI  for ESP32, e.g. LOLIN32, CLK -> SCK(18), DIN -> MOSI(23)
+// ESP8266            |  ESP32 in comments
+int8_t EINK_CS = 5;    // GPIO 5
+int8_t EINK_DC = 17;   // 17
+int8_t EINK_RST = 16;  // 16
+int8_t EINK_BUSY = 4;  // 4
+
+String EINKMODEL = "GxGDEW075T7";
+
 // Deepsleep configuration
 #define DEEPSLEEP_ENABLED
 #define DEEPSLEEP_SECONDS 3600
