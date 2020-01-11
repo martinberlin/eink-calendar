@@ -42,7 +42,7 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
-#define COMPRESSION_BUFFER 5000
+#define COMPRESSION_BUFFER 20000
 #define DECOMPRESSION_BUFFER 49000
 
 // SPI interface GPIOs defined in Config.h  
@@ -184,7 +184,7 @@ uint32_t readBuffer32(uint8_t * outBuffer, long *bytePointer)
 bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
   int displayWidth = display.width();
   int displayHeight= display.height();
-  Serial.printf("displayWidth: %d height: %d",displayWidth,displayHeight);
+  Serial.printf("EINKMODEL displayWidth: %d height: %d\n", displayWidth,displayHeight);
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
   long bytesRead = 32;  // summing the whole BMP info headers
   long bytePointer = 2; // Start reading after BMP signature 0x424D
@@ -202,7 +202,7 @@ bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
     Serial.printf("File size:%d\n",fileSize);
     Serial.printf("Image Offset:%d\n",imageOffset);
     Serial.printf("Header size:%d\n",headerSize);
-    Serial.printf("Width:%d Height:%d Bit Depth:%d\n",width,height,depth); 
+    Serial.printf("Image Width:%d Height:%d Bit Depth:%d\n",width,height,depth);
     Serial.printf("Planes:%d Format:%d\n",planes,format); 
     
     if ((planes == 1) && (format == 0 || format == 3)) { // uncompressed is handled
