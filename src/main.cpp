@@ -45,18 +45,10 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
 #define COMPRESSION_BUFFER 5000
 #define DECOMPRESSION_BUFFER 49000
 
-// USE GPIO numbers for ESP32
-//CLK  = D8; D
-//DIN  = D7; D
-//BUSY = D6; D
-//CS   = D1; IMPORTANT: Don't use D0 for Chip select
-//DC   = D3;
-//RST  = D4; Sinde D0 can be used connected to RST if you want to wake up from deepsleep!
-
-// GxIO_SPI(SPIClass& spi, int8_t cs, int8_t dc, int8_t rst = -1, int8_t bl = -1);
-GxIO_Class io(SPI, 5, 17, 16);
-// GxGDEP015OC1(GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
-GxEPD_Class display(io, 16, 4);
+// SPI interface GPIOs defined in Config.h  
+GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
+// (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
+GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
 
@@ -167,16 +159,6 @@ void handleDisplayWrite() {
   server.send(200, "text/html", "Text sent to display");
 }
 
-uint16_t read16()
-{
-  // BMP data is stored little-endian, same as Arduino.
-  uint16_t result;
-  ((uint8_t *)&result)[0] = client.read(); // LSB
-  ((uint8_t *)&result)[1] = client.read(); // MSB
-  //Serial.print(result, HEX);
-  return result;
-}
-
 uint32_t readBuffer16(uint8_t * outBuffer, long *bytePointer)
 {
   uint32_t result;
@@ -184,17 +166,6 @@ uint32_t readBuffer16(uint8_t * outBuffer, long *bytePointer)
   ((uint8_t *)&result)[0] = outBuffer[pointer]; pointer++;
   ((uint8_t *)&result)[1] = outBuffer[pointer]; pointer++; // MSB
   *bytePointer = pointer;
-  return result;
-}
-
-uint32_t read32()
-{
-  // BMP data is stored little-endian, same as Arduino.
-  uint32_t result;
-  ((uint8_t *)&result)[0] = client.read(); // LSB
-  ((uint8_t *)&result)[1] = client.read();
-  ((uint8_t *)&result)[2] = client.read();
-  ((uint8_t *)&result)[3] = client.read(); // MSB
   return result;
 }
 
@@ -213,35 +184,34 @@ uint32_t readBuffer32(uint8_t * outBuffer, long *bytePointer)
 bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
   int displayWidth = display.width();
   int displayHeight= display.height();
+  Serial.printf("displayWidth: %d height: %d",displayWidth,displayHeight);
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
   long bytesRead = 32;  // summing the whole BMP info headers
   long bytePointer = 2; // Start reading after BMP signature 0x424D
 
     uint32_t fileSize = readBuffer32(outBuffer, &bytePointer);
-    readBuffer32(outBuffer, &bytePointer);
+    readBuffer32(outBuffer, &bytePointer);                        // creatorBytes
     uint32_t imageOffset = readBuffer32(outBuffer, &bytePointer); // Start of image data
     uint32_t headerSize = readBuffer32(outBuffer, &bytePointer);
     uint32_t width  = readBuffer32(outBuffer, &bytePointer);
     uint32_t height = readBuffer32(outBuffer, &bytePointer);
     uint16_t planes = readBuffer16(outBuffer, &bytePointer);
-    uint16_t depth = readBuffer16(outBuffer, &bytePointer); // bits per pixel
+    uint16_t depth = readBuffer16(outBuffer, &bytePointer);       // bits per pixel
     uint32_t format = readBuffer32(outBuffer, &bytePointer);
 
-    Serial.print("->BMP starts here. File size: "); Serial.println(fileSize);
-    Serial.print("Image Offset: "); Serial.println(imageOffset);
-    Serial.print("Header size: "); Serial.println(headerSize);
-    Serial.print("Width * Height: "); Serial.print(String(width) + " x " + String(height));
-    Serial.print(" / Bit Depth: "); Serial.println(depth);
-    Serial.print("Planes: "); Serial.println(planes);Serial.print("Format: "); Serial.println(format);
+    Serial.printf("File size:%d\n",fileSize);
+    Serial.printf("Image Offset:%d\n",imageOffset);
+    Serial.printf("Header size:%d\n",headerSize);
+    Serial.printf("Width:%d Height:%d Bit Depth:%d\n",width,height,depth); 
+    Serial.printf("Planes:%d Format:%d\n",planes,format); 
     
     if ((planes == 1) && (format == 0 || format == 3)) { // uncompressed is handled
       // Attempt to move pointer where image starts
-      bytePointer = imageOffset-bytesRead; 
+      bytePointer = imageOffset;  
       size_t buffidx = sizeof(buffer); // force buffer load
-      
+
       for (uint16_t row = 0; row < height; row++) // for each line
       {
-        //delay(1); // May help to avoid Wdt reset
         uint8_t bits;
         for (uint16_t col = 0; col < width; col++) // for each pixel
         {
