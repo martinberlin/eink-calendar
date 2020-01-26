@@ -1,11 +1,4 @@
 #include <Config.h>
-#include <WiFiClient.h>
-#include <SPI.h>
-#include <GxEPD.h>
-// Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
-#include <GxGDEW075T7/GxGDEW075T7.cpp>
-#include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
-#include <GxIO/GxIO.cpp>
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
@@ -14,7 +7,17 @@
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
   #include <ESP8266WebServer.h>
+  #include <DNSServer.h>
 #endif
+#include <WiFiClient.h>
+#include <SPI.h>
+#include <GxEPD.h>
+// Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
+// Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
+#include <GxGDEW075T8/GxGDEW075T8.cpp>
+#include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
+#include <GxIO/GxIO.cpp>
+
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>

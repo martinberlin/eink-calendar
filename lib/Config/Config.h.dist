@@ -10,7 +10,14 @@ int8_t EINK_RST = 2;   // 16
 int8_t EINK_BUSY = 12; // 4
 
 
-String EINKMODEL = "GxGDEW075T7";
+String EINKMODEL = "GxGDEW075T8";
+
+// Deepsleep configuration
+#define DEEPSLEEP_ENABLED
+uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
+// ESP server will be online for: 
+#define SLEEP_AFTER_SECONDS 60 
+
 /* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
 CLK  = D8;
 DIN  = D7;
