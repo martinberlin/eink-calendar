@@ -352,10 +352,10 @@ void loop() {
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
+      Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
       display.powerDown();
       delay(100);
-      ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
+      ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
   }
   secondsToDeepsleep++;
   delay(1000);

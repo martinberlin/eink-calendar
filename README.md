@@ -82,3 +82,12 @@ http://twitter.com/martinfasani
 ### Schematics
 
 ![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
+
+### Build logs and detailed instructions
+
+![CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+
+### Support CALE
+
+There are commercial solutions alike and they start up to 500€ for a Eink syncronized calendar (Check getjoan.com)
+If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end. 
