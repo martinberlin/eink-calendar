@@ -8,7 +8,11 @@
   #include <ESP8266mDNS.h>
   #include <ESP8266WebServer.h>
   #include <DNSServer.h>
+  #include <EEPROM.h>
+  const uint8_t EEPROM_SIZE = 2;
+  const uint8_t EEPROM_ADDR = 1;
 #endif
+
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
@@ -366,6 +370,26 @@ void loop() {
 void setup() {
   Serial.begin(115200);
 
+  #ifdef ESP8266
+  // Initialize EEPROM
+  EEPROM.begin(EEPROM_SIZE);
+
+  uint8_t times_wakeup = EEPROM.read(EEPROM_ADDR);
+
+  if (times_wakeup<7) {
+    Serial.printf("Wake up times: %d\n", times_wakeup);
+    times_wakeup++;
+    EEPROM.write(EEPROM_ADDR, times_wakeup);
+    EEPROM.commit();
+    delay(10);
+    ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000); 
+  } else {
+    EEPROM.write(EEPROM_ADDR, 0);
+    EEPROM.commit();
+  }
+  
+  #endif
+
   display.init();
   display.setRotation(2); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
@@ -405,6 +429,12 @@ Serial.println(WiFi.localIP());
     displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
     Serial.printf("Please check your credentials in Config.h\nCould not connect to %s\n",WIFI_SSID);
     delay(1000);
+    #ifdef ESP8266
+      times_wakeup--;
+      EEPROM.write(EEPROM_ADDR, times_wakeup);
+      EEPROM.commit();
+      delay(2);
+    #endif
     ESP.restart();
   }
 }
