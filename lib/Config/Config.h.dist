@@ -16,19 +16,12 @@ String EINKMODEL = "GxGDEW075T8";
 #define DEEPSLEEP_ENABLED
 uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
 // ESP server will be online for: 
-#define SLEEP_AFTER_SECONDS 60 
-
-/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
-CLK  = D8;
-DIN  = D7;
-BUSY = D6;
-CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select since it can be used to wake up from deepsleep connected to RST
-DC   = D3;
-RST  = D4; 
-*/
+#define SLEEP_AFTER_SECONDS 240 
 
 // Point this to the Webpage rendering your calendar
 String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
 const char* screenshotHost = "mywebsite.com";
 String screenshotPath = "/screenshot/";
+// Screenshot default Zoom
+String DEFAULT_ZOOM = ".7";
