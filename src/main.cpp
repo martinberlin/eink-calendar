@@ -26,7 +26,7 @@
 bool debugMode = false;
 
 unsigned int secondsToDeepsleep = 0;
-
+uint64_t USEC = 1000000;
 const char* domainName = "calendar"; // mDNS
 String message;
 // Makes a div id="m" containing response message to dissapear after 3 seconds
@@ -352,10 +352,16 @@ void loop() {
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
       display.powerDown();
-      delay(100);
-      ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+      delay(10);
+      #ifdef ESP32
+        Serial.printf("Going to sleep %llu\n", DEEPSLEEP_SECONDS);
+        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+        esp_deep_sleep_start();
+      #elif ESP8266
+        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+        ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+      #endif
   }
   secondsToDeepsleep++;
   delay(1000);
@@ -402,9 +408,11 @@ Serial.println(WiFi.localIP());
   if (WiFi.status() == WL_CONNECTED) {
     handleWebToDisplay();
   } else {
+    // Just restart fast do not print in display
+    /* 
     displayMessage("Please check your credentials in Config.h\nCould not connect to "+String(WIFI_SSID),80);
     Serial.printf("Please check your credentials in Config.h\nCould not connect to %s\n",WIFI_SSID);
-    delay(1000);
+    delay(1000); */
     ESP.restart();
   }
 }

@@ -83,6 +83,15 @@ http://twitter.com/martinfasani
 
 ![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
 
+#### ESP32 wiring suggestion
+
+Mapping suggestion for ESP32, e.g. LOLIN32:
+    This pins defined in lib/Config/Config.h
+    BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)  
+
+    This ones are fixed
+    CLK -> SCK(18), DIN -> MOSI(23)
+
 ### Build logs and detailed instructions
 
 ![CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
