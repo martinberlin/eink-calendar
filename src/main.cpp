@@ -204,7 +204,7 @@ void handleWebToDisplay() {
     }
   
   String image = screenshotPath+"?u=" + url + "&z=" + zoom + "&b=" + brightness + "&eink=" + EINKMODEL;
-  Serial.println(image);
+
   String request;
   request  = "GET " + image + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
