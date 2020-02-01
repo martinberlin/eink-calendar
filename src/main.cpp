@@ -27,7 +27,7 @@
 #include <Fonts/FreeMonoBold24pt7b.h>
 
 bool debugMode = false;
-
+uint64_t USEC = 1000000;
 unsigned int secondsToDeepsleep = 0;
 
 const char* domainName = "calendar"; // mDNS
@@ -394,20 +394,24 @@ Serial.print(inBuffer[0], HEX);Serial.println(" ");
 }
 
 void loop() {
- server.handleClient();
+  server.handleClient();
 
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      Serial.println("Going to sleep one hour. Waking up only if D0 is connected to RST");
       display.powerDown();
-      delay(100);
-      ESP.deepSleep(DEEPSLEEP_SECONDS*1000000ULL); // Expects microseconds
+      #ifdef ESP32
+        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+        esp_deep_sleep_start();
+      #elif ESP8266
+        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+        ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+      #endif
   }
   secondsToDeepsleep++;
   delay(1000);
 #endif
-
 }
 
 void setup() {
@@ -420,7 +424,7 @@ void setup() {
 
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<30) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<10) {
     Serial.print(" .");
     delay(500);
     connectTries++;
