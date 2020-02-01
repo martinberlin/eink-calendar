@@ -290,7 +290,7 @@ bool bmpBufferRead(uint8_t * outBuffer, long byteCount) {
 void handleWebToDisplay() {
   int milliIni = millis();
   String url = calendarUrl;
-  String zoom = ".8";
+  String zoom = DEFAULT_ZOOM;
   String brightness = "100";
   if (server.args() > 0) {
     for (byte i = 0; i < server.args(); i++) {

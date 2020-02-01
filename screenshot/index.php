@@ -1,5 +1,5 @@
 <?php
-require './vendor/autoload.php';
+require './../vendor/autoload.php';
 
 use Knp\Snappy\Image;
 
@@ -8,12 +8,25 @@ $url = isset($_GET['u']) ? $_GET['u'] : null;
 $brightness = isset($_GET['b']) && ($_GET['b']>50 && $_GET['b']<200) ? $_GET['b'] : 100;
 
 $eink_model = isset($_GET['eink']) ? $_GET['eink'] : '';
+$bitdepth = 1;
 
 switch($eink_model) {
+  case 'GxGDEW042T2':
+   $displayWidth = 400;
+   $displayHeight = 300;
+   $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.4';
+   $bitdepth = 4;
+  break; 
   case 'GxGDEW027C44':
    $displayWidth = 264;
    $displayHeight = 176;
    $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.6';
+   $bitdepth = 4;
+  break;
+  case 'GxGDEW075T7':
+   $displayWidth = 800;
+   $displayHeight = 480;
+   $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '1';
   break;
   default:
    // Default values in case eink model is not received
@@ -84,8 +97,8 @@ $hue = 100;
 
 $imageX->modulateImage($brightness, $saturation, $hue);
 // This quantize returns a 1-bit image but does not work on 2.7 display
-if ($eink_model !== 'GxGDEW027C44') {
-  $imageX->quantizeImage(2,   // Number of colors
+if ($bitdepth === 1) {
+  $imageX->quantizeImage(2,     // Number of colors  
     Imagick::COLORSPACE_GRAY, // Colorspace
     8,                        // Depth tree  
     true,                     // Dither

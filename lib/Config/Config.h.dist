@@ -10,8 +10,6 @@ int8_t EINK_DC = 17;   // 17
 int8_t EINK_RST = 16;  // 16
 int8_t EINK_BUSY = 4;  // 4
 
-String EINKMODEL = "GxGDEW075T7";
-
 // Deepsleep configuration
 #define DEEPSLEEP_ENABLED
 #define DEEPSLEEP_SECONDS 3600
@@ -23,3 +21,8 @@ String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
 const char* screenshotHost = "mywebsite.com";
 String screenshotPath = "/screenshot/";
+
+// Screenshot script options
+String DEFAULT_ZOOM = ".7";
+// EINKMODEL sets the size in the Backend
+String EINKMODEL = "GxGDEW075T7"; 
