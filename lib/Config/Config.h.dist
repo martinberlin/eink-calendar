@@ -32,3 +32,6 @@ String calendarUrl = "http://mywebsite.com/calendar";
 // Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
 const char* screenshotHost = "mywebsite.com";
 String screenshotPath = "/screenshot/";
+
+String EINKMODEL = "GxGDEW075T8";
+String DEFAULT_ZOOM = ".6";

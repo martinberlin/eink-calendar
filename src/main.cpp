@@ -14,7 +14,7 @@
 #include <GxEPD.h>
 // Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
 // Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-#include <GxGDEW075T8/GxGDEW075T8.cpp>
+#include <GxGDEW042T2/GxGDEW042T2.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
@@ -178,7 +178,7 @@ uint32_t read32()
 void handleWebToDisplay() {
   int millisIni = millis();
   String url = calendarUrl;
-  String zoom = ".8";
+  String zoom = DEFAULT_ZOOM;
   String brightness = "100";
   if (server.args() > 0) {
     for (byte i = 0; i < server.args(); i++) {
