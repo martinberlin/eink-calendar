@@ -377,7 +377,7 @@ void setup() {
 
   uint8_t times_wakeup = EEPROM.read(EEPROM_ADDR);
 
-  if (times_wakeup<7) {
+  if (times_wakeup<3) {
     Serial.printf("Wake up times: %d\n", times_wakeup);
     times_wakeup++;
     EEPROM.write(EEPROM_ADDR, times_wakeup);
@@ -385,7 +385,7 @@ void setup() {
     delay(10);
     ESP.deepSleep(10800e6);
   } else {
-    EEPROM.write(EEPROM_ADDR, 7);
+    EEPROM.write(EEPROM_ADDR, 0);
     EEPROM.commit();
   }
   
