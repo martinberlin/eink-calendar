@@ -355,12 +355,12 @@ void loop() {
       display.powerDown();
       delay(10);
       #ifdef ESP32
-        Serial.printf("Going to sleep %llu\n", DEEPSLEEP_SECONDS);
+        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
         esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
         esp_deep_sleep_start();
       #elif ESP8266
         Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
       #endif
   }
   secondsToDeepsleep++;
