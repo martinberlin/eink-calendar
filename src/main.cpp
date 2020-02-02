@@ -360,7 +360,7 @@ void loop() {
       Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
       display.powerDown();
       delay(100);
-      ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+      ESP.deepSleep(10800e6);  // 3600*3 e6 = 3 hour in microseconds / ESP.deepSleepMax()
   }
   secondsToDeepsleep++;
   delay(1000);
@@ -383,9 +383,9 @@ void setup() {
     EEPROM.write(EEPROM_ADDR, times_wakeup);
     EEPROM.commit();
     delay(10);
-    ESP.deepSleep(DEEPSLEEP_SECONDS * 1000000); 
+    ESP.deepSleep(10800e6);
   } else {
-    EEPROM.write(EEPROM_ADDR, 0);
+    EEPROM.write(EEPROM_ADDR, 7);
     EEPROM.commit();
   }
   
