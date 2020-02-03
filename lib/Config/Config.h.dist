@@ -9,6 +9,8 @@ int8_t EINK_DC = 0;    // 17
 int8_t EINK_RST = 2;   // 16
 int8_t EINK_BUSY = 12; // 4
 
+// Sent to display.setRotation(eink_rotation) method in gxEPD
+int8_t eink_rotation = 0;
 
 String EINKMODEL = "GxGDEW075T8";
 

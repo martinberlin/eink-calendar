@@ -373,7 +373,7 @@ void setup() {
   Serial.begin(115200);
 
   display.init();
-  display.setRotation(2); // Rotates display N times clockwise
+  display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
   uint8_t connectTries = 0;
