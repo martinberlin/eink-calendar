@@ -10,6 +10,9 @@ int8_t EINK_DC = 17;   // 17
 int8_t EINK_RST = 16;  // 16
 int8_t EINK_BUSY = 4;  // 4
 
+// Sent to display.setRotation(eink_rotation) method in gxEPD
+int8_t eink_rotation = 0;
+
 // Deepsleep configuration
 #define DEEPSLEEP_ENABLED
 #define DEEPSLEEP_SECONDS 3600
