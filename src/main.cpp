@@ -1,12 +1,13 @@
 // Miniz zlib: Discard parts that we do not use:
 #define MINIZ_NO_ARCHIVE_APIS
 #define MINIZ_NO_STDIO
+#define MINIZ_NO_TIME
 #include "miniz.c"
 #include <Config.h>
 #include <SPI.h>
 #include <GxEPD.h>
 // Please check what is the right one for your Display: https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
-#include <GxGDEW075T7/GxGDEW075T7.cpp>
+#include <GxGDEW042T2/GxGDEW042T2.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 #include <WiFiClient.h>
@@ -42,8 +43,9 @@ String javascriptFadeMessage = "<script>setTimeout(function(){document.getElemen
   ESP8266WebServer server(80);
 #endif
 
+// Note if there is a reset after decompression is probably that the decompressed size overflows this buffer limits, just update it:
 #define COMPRESSION_BUFFER 20000
-#define DECOMPRESSION_BUFFER 49000
+#define DECOMPRESSION_BUFFER 69000
 
 // SPI interface GPIOs defined in Config.h  
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
