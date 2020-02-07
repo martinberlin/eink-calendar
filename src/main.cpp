@@ -7,7 +7,7 @@
 #include <SPI.h>
 #include <GxEPD.h>
 // Please check what is the right one for your Display: https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
-#include <GxGDEW042T2/GxGDEW042T2.cpp>
+#include <GxGDEW075T7/GxGDEW075T7.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 #include <WiFiClient.h>
