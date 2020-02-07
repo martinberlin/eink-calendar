@@ -14,7 +14,7 @@
 #include <GxEPD.h>
 // Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
 // Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-#include <GxGDEW042T2/GxGDEW042T2.cpp>
+#include <GxGDEW075T7/GxGDEW075T7.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
