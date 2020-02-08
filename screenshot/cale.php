@@ -29,7 +29,7 @@ if (!$url) {
     exit('Url not defined');
 }
 // CACHE Validity
-$validity = 1; // seconds * minutes
+$validity = 1800; // seconds * minutes
 
 $start = microtime(true);
 $host = parse_url($url, PHP_URL_HOST);
@@ -43,6 +43,7 @@ $filename = $imageBasePath.'/'.$host.'/'.$path.'.bmp';
 if($cacheEnabled && file_exists($filename) && filectime($filename) > time() - $validity) {
     // cache is valid
     $file = file_get_contents($filename);
+    header('Content-Type:image/bmp');
     exit($file);
 }
 //exit(print_r(Imagick::getVersion()));
