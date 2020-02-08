@@ -9,9 +9,9 @@ $compressed = (isset($_GET['c']) && $_GET['c']=='1') ?true:false;
 
 $brightness = isset($_GET['b']) && ($_GET['b']>0 && $_GET['b']<200) ? $_GET['b'] : 100;
 
-$width  = (isset($_GET['w']) && ($_GET['w']>1 && $_GET['b']<1201)) ? $_GET['w'] : null;
+$width  = (isset($_GET['w']) && ($_GET['w']>1 && $_GET['w']<1201)) ? $_GET['w'] : null;
 
-$height = (isset($_GET['h']) && ($_GET['h']>1 && $_GET['b']<1201)) ? $_GET['h'] : null;
+$height = (isset($_GET['h']) && ($_GET['h']>1 && $_GET['h']<1201)) ? $_GET['h'] : null;
 
 $bitdepth   = (isset($_GET['d']) && ($_GET['d']>1 && $_GET['d']<5)) ? $_GET['d'] :1;
 
