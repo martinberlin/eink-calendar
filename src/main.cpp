@@ -94,13 +94,25 @@ bool parsePathInformation(char *url, char **path, bool *secure){
       }
       break;
     case '/': // We know if we skipped the schema, than the first / will be the start of the path
-      *dest_path = &url[i];
+      *path = &url[i];
       return true;
     }
   }
   return false;
 }
 
+char * hostFrom(char url[]) {
+  char * pch;
+  pch = strtok (url,"/");
+  __uint8_t p = 0;
+  while (pch != NULL && p<2)
+  {
+    if (p==1) break;
+    pch = strtok (NULL, "/");
+    p++;
+  }
+  return pch;
+}
 
 void handleWebToDisplay() {
   int millisIni = millis();
@@ -112,11 +124,13 @@ void handleWebToDisplay() {
   }
 
   String request;
-  request  = "GET " + path + " HTTP/1.1\r\n";
+  request  = "GET " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
-  //Serial.println(String(host)+screenPath);
+
+  Serial.println(request);
+  return;
 
   client.connect(screenshotHost, 80);
   client.print(request); //send the http request to the server
@@ -302,8 +316,9 @@ void setup() {
     delay(999);
     handleWebToDisplay();
   } else {
-    Serial.printf("Going to sleep %d seconds\n", 120);
-    esp_sleep_enable_timer_wakeup(120 * USEC);
+    int seconds = 10;
+    Serial.printf("Going to sleep %d seconds\n", seconds);
+    esp_sleep_enable_timer_wakeup(seconds * USEC);
     esp_deep_sleep_start();
-      }
+    }
 }
