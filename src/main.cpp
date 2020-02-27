@@ -108,14 +108,20 @@ void handleWebToDisplay() {
   char *path;
   bool secure = true; // Default to secure
   if(!parsePathInformation(screenUrl, &path, &secure)){ // Let me know if you need the host too!
-    // Handle Error
+    Serial.println("Parsing error!");
+    return;
   }
+  Serial.print("Path is ");
+  Serial.println(path);
+  Serial.print("Secure is ");
+  Serial.println(secure);
 
   String request;
   request  = "GET " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
+  Serial.println(request);
   //Serial.println(String(host)+screenPath);
 
   client.connect(screenshotHost, 80);
@@ -279,9 +285,6 @@ void loop() {
 
 void setup() {
   Serial.begin(115200);
-  
-  char * host = hostFrom(screenUrl);
-  Serial.printf("HOST: %s \n", host); // This is OK
 
   display.init();
   display.setRotation(eink_rotation); // Rotates display N times clockwise
