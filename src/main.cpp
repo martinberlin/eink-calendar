@@ -71,25 +71,48 @@ uint32_t read32()
   return result;
 }
 
-char * hostFrom(char url[]) {
-  char * pch;
-  pch = strtok (url,"/");
-  __uint8_t p = 0;
-  while (pch != NULL && p<2)
-  {
-    if (p==1) break;
-    pch = strtok (NULL, "/");
-    p++;
+bool parsePathInformation(char *url, char **path, bool *secure){
+  if(url==NULL){
+    return false;
   }
-  return pch;
+  for(unsigned i = 0; i < strlen(url); i++){
+    switch (url[i])
+    {
+    case ':':
+      if (i < 7) // If we find : past the 7th position, we know it's probably a port number
+      { // This is to handle "http" or "https" in front of URL
+        if (*secure!=NULL&&i == 4)
+        {
+          *secure = false;
+        }
+        else if(*secure!=NULL)
+        {
+          *secure = true;
+        }
+        i = i + 2; // Move our cursor out of the schema into the domain
+        continue;
+      }
+      break;
+    case '/': // We know if we skipped the schema, than the first / will be the start of the path
+      *dest_path = &url[i];
+      return true;
+    }
+  }
+  return false;
 }
+
 
 void handleWebToDisplay() {
   int millisIni = millis();
-  char * host = hostFrom(screenUrl);
+
+  char *path;
+  bool secure = true; // Default to secure
+  if(!parsePathInformation(screenUrl, &path, &secure)){ // Let me know if you need the host too!
+    // Handle Error
+  }
 
   String request;
-  request  = "GET " + screenPath + " HTTP/1.1\r\n";
+  request  = "GET " + path + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
