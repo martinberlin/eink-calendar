@@ -31,11 +31,10 @@ DC   = D3;
 RST  = D4; 
 */
 
-// Point this to the Webpage rendering your calendar
-String calendarUrl = "http://mywebsite.com/calendar";
-// Point this to the screenshot endpoint (Should be placed on screenshot/index.php)
-const char* screenshotHost = "mywebsite.com";
-String screenshotPath = "/screenshot/";
+// In cale branch this URL represents the final image URL. 
+// --> https://cale.es <--  Get in CALE your image URL
+char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
 
-String EINKMODEL = "GxGDEW075T8";
-String DEFAULT_ZOOM = ".6";
+// As a test, but we should extract this from a single URL:
+const char* screenshotHost = "img.cale.es";
+String screenPath = "/bmp/fasani/5e5646e1365a9";
