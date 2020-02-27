@@ -81,11 +81,11 @@ bool parsePathInformation(char *url, char **path, bool *secure){
     case ':':
       if (i < 7) // If we find : past the 7th position, we know it's probably a port number
       { // This is to handle "http" or "https" in front of URL
-        if (*secure!=NULL&&i == 4)
+        if (secure!=NULL&&i == 4)
         {
           *secure = false;
         }
-        else if(*secure!=NULL)
+        else if(secure!=NULL)
         {
           *secure = true;
         }
@@ -94,7 +94,7 @@ bool parsePathInformation(char *url, char **path, bool *secure){
       }
       break;
     case '/': // We know if we skipped the schema, than the first / will be the start of the path
-      *dest_path = &url[i];
+      *path = &url[i];
       return true;
     }
   }
@@ -112,7 +112,7 @@ void handleWebToDisplay() {
   }
 
   String request;
-  request  = "GET " + path + " HTTP/1.1\r\n";
+  request  = "GET " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
