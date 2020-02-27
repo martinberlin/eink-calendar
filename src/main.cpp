@@ -81,11 +81,11 @@ bool parsePathInformation(char *url, char **path, bool *secure){
     case ':':
       if (i < 7) // If we find : past the 7th position, we know it's probably a port number
       { // This is to handle "http" or "https" in front of URL
-        if (*secure!=NULL&&i == 4)
+        if (secure!=NULL&&i == 4)
         {
           *secure = false;
         }
-        else if(*secure!=NULL)
+        else if(secure!=NULL)
         {
           *secure = true;
         }
