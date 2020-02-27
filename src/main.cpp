@@ -12,7 +12,8 @@
 #include <GxEPD.h>
 // Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
 // Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-#include <GxGDEW075T7/GxGDEW075T7.cpp>
+//#include <GxGDEW075T7/GxGDEW075T7.cpp>
+#include <GxGDEW042T2/GxGDEW042T2.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
@@ -101,18 +102,6 @@ bool parsePathInformation(char *url, char **path, bool *secure){
   return false;
 }
 
-char * hostFrom(char url[]) {
-  char * pch;
-  pch = strtok (url,"/");
-  __uint8_t p = 0;
-  while (pch != NULL && p<2)
-  {
-    if (p==1) break;
-    pch = strtok (NULL, "/");
-    p++;
-  }
-  return pch;
-}
 
 void handleWebToDisplay() {
   int millisIni = millis();
@@ -120,17 +109,21 @@ void handleWebToDisplay() {
   char *path;
   bool secure = true; // Default to secure
   if(!parsePathInformation(screenUrl, &path, &secure)){ // Let me know if you need the host too!
-    // Handle Error
+    Serial.println("Parsing error!");
+    return;
   }
+  Serial.print("Path is ");
+  Serial.println(path);
+  Serial.print("Secure is ");
+  Serial.println(secure);
 
   String request;
   request  = "GET " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(screenshotHost) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
-
   Serial.println(request);
-  return;
+  //Serial.println(String(host)+screenPath);
 
   client.connect(screenshotHost, 80);
   client.print(request); //send the http request to the server
@@ -291,11 +284,21 @@ void loop() {
 
 }
 
+char * hostFrom(char url[]) {
+  char * pch;
+  pch = strtok (url,"/");
+  __uint8_t p = 0;
+  while (pch)
+  {
+    if (p==1) break;
+    pch = strtok (NULL, "/");
+    p++;
+  }
+  return pch;
+}
+
 void setup() {
   Serial.begin(115200);
-  
-  char * host = hostFrom(screenUrl);
-  Serial.printf("HOST: %s \n", host); // This is OK
 
   display.init();
   display.setRotation(eink_rotation); // Rotates display N times clockwise
@@ -303,7 +306,7 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<20) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<6) {
     Serial.print(" .");
     delay(500);
     connectTries++;
@@ -316,9 +319,9 @@ void setup() {
     delay(999);
     handleWebToDisplay();
   } else {
-    int seconds = 10;
-    Serial.printf("Going to sleep %d seconds\n", seconds);
-    esp_sleep_enable_timer_wakeup(seconds * USEC);
+    int secs=1;
+    Serial.printf("Going to sleep %d seconds\n", secs);
+    esp_sleep_enable_timer_wakeup(secs * USEC);
     esp_deep_sleep_start();
-    }
+      }
 }
