@@ -1,4 +1,9 @@
 #include <WString.h>
+
+// In cale branch this URL represents the final image URL. 
+// --> https://cale.es <--  Get in CALE your image URL
+char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
+
 #define WIFI_SSID "Your WiFi Name"
 #define WIFI_PASS ""
 
@@ -11,8 +16,6 @@ int8_t EINK_BUSY = 12; // 4
 
 // Sent to display.setRotation(eink_rotation) method in gxEPD
 int8_t eink_rotation = 0;
-
-String EINKMODEL = "GxGDEW075T8";
 
 // Deepsleep configuration
 #define DEEPSLEEP_ENABLED
@@ -30,11 +33,3 @@ CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select since it can be used 
 DC   = D3;
 RST  = D4; 
 */
-
-// In cale branch this URL represents the final image URL. 
-// --> https://cale.es <--  Get in CALE your image URL
-char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
-
-// As a test, but we should extract this from a single URL:
-const char* screenshotHost = "img.cale.es";
-String screenPath = "/bmp/fasani/5e5646e1365a9";
