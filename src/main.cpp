@@ -26,7 +26,6 @@ bool debugMode = false;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
-//String message;
 
 // SPI interface GPIOs defined in Config.h  
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
@@ -34,6 +33,25 @@ GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
+
+
+// Determine path and schema (http vs https)
+char *path;
+bool secure = true;
+char * host;
+
+char * hostFrom(char url[]) {
+  char * pch;
+  pch = strtok (url,"/");
+  __uint8_t p = 0;
+  while (pch)
+  {
+    if (p==1) break;
+    pch = strtok (NULL, "/");
+    p++;
+  }
+  return pch;
+}
 
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
@@ -105,27 +123,25 @@ bool parsePathInformation(char *url, char **path, bool *secure){
 
 void handleWebToDisplay() {
   int millisIni = millis();
+  // Copy the screenUrl[] in a new char:
+  char *url_copy = strdup(screenUrl);
 
-  char *path;
-  bool secure = true; // Default to secure
-  if(!parsePathInformation(screenUrl, &path, &secure)){ // Let me know if you need the host too!
-    Serial.println("Parsing error!");
-    return;
+  if(!parsePathInformation(url_copy, &path, &secure)){ // Let me know if you need the host too!
+      Serial.println("Parsing error with given screenUrl");
+      return;
   }
-  Serial.print("Path is ");
-  Serial.println(path);
-  Serial.print("Secure is ");
-  Serial.println(secure);
+  // Read host
+  host = hostFrom(screenUrl);
 
   String request;
   request  = "GET " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(screenshotHost) + "\r\n";
+  request += "Host: " + String(host) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
-  Serial.println(request);
-  //Serial.println(String(host)+screenPath);
+  
+  Serial.println("REQUEST: "+request);
 
-  client.connect(screenshotHost, 80);
+  client.connect(host, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -282,19 +298,6 @@ void loop() {
   delay(1000);
 #endif
 
-}
-
-char * hostFrom(char url[]) {
-  char * pch;
-  pch = strtok (url,"/");
-  __uint8_t p = 0;
-  while (pch)
-  {
-    if (p==1) break;
-    pch = strtok (NULL, "/");
-    p++;
-  }
-  return pch;
 }
 
 void setup() {
