@@ -12,8 +12,8 @@
 #include <GxEPD.h>
 // Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
 // Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-//#include <GxGDEW075T7/GxGDEW075T7.cpp>
-#include <GxGDEW042T2/GxGDEW042T2.cpp>
+#include <GxGDEW075T7/GxGDEW075T7.cpp>
+//#include <GxGDEW042T2/GxGDEW042T2.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
@@ -136,6 +136,9 @@ void handleWebToDisplay() {
   String request;
   request  = "GET " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(host) + "\r\n";
+  if (bearer != "") {
+    request += "Authorization: Bearer "+bearer+ "\r\n";
+  }
   request += "Connection: close\r\n";
   request += "\r\n";
   

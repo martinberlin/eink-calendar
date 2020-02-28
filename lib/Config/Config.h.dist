@@ -3,7 +3,10 @@
 // In cale branch this URL represents the final image URL. 
 // --> https://cale.es <--  Get in CALE your image URL
 char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
+// Private Screen Token. Leave as "" if the screen is public
+String bearer="";
 
+// Your WiFi Credentials
 #define WIFI_SSID "Your WiFi Name"
 #define WIFI_PASS ""
 
