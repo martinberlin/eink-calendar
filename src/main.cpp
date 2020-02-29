@@ -325,9 +325,17 @@ void setup() {
     delay(999);
     handleWebToDisplay();
   } else {
-    int secs=1;
-    Serial.printf("Going to sleep %d seconds\n", secs);
-    esp_sleep_enable_timer_wakeup(secs * USEC);
-    esp_deep_sleep_start();
+    // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
+    int secs = 1800;
+    display.powerDown();
+
+      #ifdef ESP32
+        Serial.printf("Going to sleep %d seconds\n", secs);
+        esp_sleep_enable_timer_wakeup(secs * USEC);
+        esp_deep_sleep_start();
+      #elif ESP8266
+        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+        ESP.deepSleep(1800e6);
+      #endif
       }
 }
