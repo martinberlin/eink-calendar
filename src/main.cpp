@@ -158,6 +158,17 @@ bool parsePathInformation(char *url, char **path, bool *secure){
   return false;
 }
 
+/**
+ * Convert the internal IP to string
+ */
+String IpAddress2String(const IPAddress& ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3]);
+}
+
 
 void handleWebToDisplay() {
   int millisIni = millis();
@@ -172,12 +183,18 @@ void handleWebToDisplay() {
   host = hostFrom(screenUrl);
 
   String request;
-  request  = "GET " + String(path) + " HTTP/1.1\r\n";
+  request  = "POST " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(host) + "\r\n";
   if (bearer != "") {
     request += "Authorization: Bearer "+bearer+ "\r\n";
   }
-  request += "Connection: close\r\n";
+
+#ifdef ENABLE_INTERNAL_IP_LOG
+  String localIp = "ip="+IpAddress2String(WiFi.localIP());
+  request += "Content-Type: application/x-www-form-urlencoded\r\n";
+  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
+  request += localIp +"\r\n";
+#endif
   request += "\r\n";
   
   Serial.println("REQUEST: "+request);
