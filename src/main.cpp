@@ -10,10 +10,48 @@
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
-// Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
-// Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-#include <GxGDEW075T7/GxGDEW075T7.cpp>
-//#include <GxGDEW042T2/GxGDEW042T2.cpp>
+
+// Get the right interface for the display
+#ifdef GDEW042T2
+  #include <GxGDEW042T2/GxGDEW042T2.h>
+  #elif GDEW075T8
+  #include <GxGDEW075T8/GxGDEW075T8.h>
+  #elif GDEW075T7
+  #include <GxGDEW075T7/GxGDEW075T7.h> 
+  #elif GDEW0213I5F
+  #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
+  #elif GDE0213B1
+  #include <GxGDE0213B1/GxGDE0213B1.h>
+  #elif GDEH0213B72
+  #include <GxGDEH0213B72/GxGDEH0213B72.h>
+  #elif GDEH0213B73
+  #include <GxGDEH0213B73/GxGDEH0213B73.h>
+  #elif GDEW0213Z16
+  #include <GxGDEW0213Z16/GxGDEW0213Z16.h>
+  #elif GDEH029A1
+  #include <GxGDEH029A1/GxGDEH029A1.h>
+  #elif GDEW029T5
+  #include <GxGDEW029T5/GxGDEW029T5.h>
+  #elif GDEW029Z10
+  #include <GxGDEW029Z10/GxGDEW029Z10.h>
+  #elif GDEW026T0
+  #include <GxGDEW026T0/GxGDEW026T0.h>
+  #elif GDEW027C44
+  #include <GxGDEW027C44/GxGDEW027C44.h>
+  #elif GDEW027W3
+  #include <GxGDEW027W3/GxGDEW027W3.h>
+  #elif GDEW0371W7
+  #include <GxGDEW0371W7/GxGDEW0371W7.h>
+  #elif GDEW042Z15
+  #include <GxGDEW042Z15/GxGDEW042Z15.h>
+  #elif GDEW0583T7
+  #include <GxGDEW0583T7/GxGDEW0583T7.h>
+  #elif GDEW075Z09
+  #include <GxGDEW075Z09/GxGDEW075Z09.h>
+  #elif GDEW075Z08
+  #include <GxGDEW075Z08/GxGDEW075Z08.h>
+#endif
+
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
