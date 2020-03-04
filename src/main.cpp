@@ -24,8 +24,8 @@
   #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
   #elif defined(GDE0213B1)
   #include <GxGDE0213B1/GxGDE0213B1.h>
-  #elif defined(GDEH0213B72)
-  #include <GxGDEH0213B72/GxGDEH0213B72.h>
+/*   #elif defined(GDEH0213B72)
+  #include <GxGDEH0213B72/GxGDEH0213B72.h> */
   #elif defined(GDEH0213B73)
   #include <GxGDEH0213B73/GxGDEH0213B73.h>
   #elif defined(GDEW0213Z16)
@@ -208,7 +208,7 @@ void handleWebToDisplay() {
   Serial.println("REQUEST: "+request);
 
   client.connect(host, 80);
-  client.print(request); //send the http request to the server
+  client.print(request);
   client.flush();
   display.fillScreen(GxEPD_WHITE);
   
@@ -220,35 +220,21 @@ void handleWebToDisplay() {
       return;
     }
   }
-  
   int displayWidth = display.width();
   int displayHeight= display.height();// Not used now
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-  long bytesRead = 32; // summing the whole BMP info headers
+  long bytesRead = 34; // summing the whole BMP info headers
   long count = 0;
-  uint8_t lastByte = 0x00;
 
 // Start reading bits
 while (client.available()) {
   count++;
-  uint8_t clientByte = client.read();
-  uint16_t bmp;
-  ((uint8_t *)&bmp)[0] = lastByte; // LSB
-  ((uint8_t *)&bmp)[1] = clientByte; // MSB
-  if (debugMode) {
-    Serial.print(bmp,HEX);Serial.print(" ");
-    if (0 == count % 16) {
-      Serial.println();
-    }
-    delay(1);
-  }
-  lastByte = clientByte;
   
-  if (bmp == 0x4D42) { // BMP signature
+  if (read16() == 0x4D42) { // BMP signature
     int millisBmp = millis();
     uint32_t fileSize = read32();
-    read32(); // creatorBytes
-    uint32_t imageOffset = read32(); // Start of image data
+    uint32_t creatorBytes = read32();
+    uint32_t imageOffset = read32();
     uint32_t headerSize = read32();
     uint32_t width  = read32();
     uint32_t height = read32();
@@ -557,18 +543,26 @@ void loop() {
 void setup() {
   Serial.begin(115200);
 
+
   display.init();
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
   uint8_t connectTries = 0;
+
+if (!FILESYSTEM.begin()) {
+        Serial.println("FILESYSTEM is not initialized. Please save SPIFFs");
+}
+drawBitmap("/250x122.bmp", 0, 0, false);
+display.update();
+delay(1000);
+
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED && connectTries<6) {
     Serial.print(" .");
     delay(500);
     connectTries++;
   }
-
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("ONLINE");
