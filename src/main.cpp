@@ -553,10 +553,11 @@ void setup() {
 if (!FILESYSTEM.begin()) {
         Serial.println("FILESYSTEM is not initialized. Please save SPIFFs");
 }
-drawBitmap("/250x122.bmp", 0, 0, false);
+//drawBitmap("/250x122.bmp", 0, 0, false);
+/* drawBitmap("/400x300-4bit.bmp", 0, 0, false);
 display.update();
-delay(1000);
-
+delay(2000);
+ */
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED && connectTries<6) {
     Serial.print(" .");
