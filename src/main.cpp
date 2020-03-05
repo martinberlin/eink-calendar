@@ -175,13 +175,11 @@ void handleWebToDisplay() {
   // Copy the screenUrl[] in a new char:
   char *url_copy = strdup(screenUrl);
 
-  if(!parsePathInformation(url_copy, &path, &secure)){ // Let me know if you need the host too!
+  if(!parsePathInformation(url_copy, &path, &secure)){
       Serial.println("Parsing error with given screenUrl");
       return;
   }
-  // Read host
   host = hostFrom(screenUrl);
-
   String request;
   request  = "POST " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(host) + "\r\n";
@@ -198,9 +196,9 @@ void handleWebToDisplay() {
   request += "\r\n";
   
   Serial.println("REQUEST: "+request);
-
+  // Send the http request to the server
   client.connect(host, 80);
-  client.print(request); //send the http request to the server
+  client.print(request);
   client.flush();
   display.fillScreen(GxEPD_WHITE);
   
@@ -216,7 +214,7 @@ void handleWebToDisplay() {
   int displayWidth = display.width();
   int displayHeight= display.height();// Not used now
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-  long bytesRead = 32; // summing the whole BMP info headers
+  long bytesRead = 34; // summing the whole BMP info headers
   long count = 0;
   uint8_t lastByte = 0x00;
 
@@ -381,7 +379,7 @@ void setup() {
     handleWebToDisplay();
   } else {
     // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
-    int secs = 1800;
+    int secs = 180;
     display.powerDown();
 
       #ifdef ESP32
