@@ -128,10 +128,13 @@ uint32_t read32()
   return result;
 }
 
-bool parsePathInformation(char *url, char **path, bool *secure){
+bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len, bool *secure){
   if(url==NULL){
     return false;
   }
+  char *host_start = NULL;
+  bool path_resolved = false;
+  unsigned hostname_length = 0;
   for(unsigned i = 0; i < strlen(url); i++){
     switch (url[i])
     {
@@ -147,11 +150,25 @@ bool parsePathInformation(char *url, char **path, bool *secure){
           *secure = true;
         }
         i = i + 2; // Move our cursor out of the schema into the domain
+        host_start = &url[i+1];
+        hostname_length = 0;
         continue;
       }
       break;
     case '/': // We know if we skipped the schema, than the first / will be the start of the path
       *path = &url[i];
+      path_resolved = true;
+      break;
+    }
+    if(path_resolved){
+      break;
+    }
+    ++hostname_length;
+  }
+  if(host_start!=NULL&&*path!=NULL&&*host_len>hostname_length){
+    memcpy(host, host_start, hostname_length);
+    host[hostname_length] = NULL;
+    if(path_resolved){
       return true;
     }
   }
@@ -175,30 +192,30 @@ void handleWebToDisplay() {
   // Copy the screenUrl[] in a new char:
   char *url_copy = strdup(screenUrl);
 
-  if(!parsePathInformation(url_copy, &path, &secure)){
-      Serial.println("Parsing error with given screenUrl");
-      return;
+  char *path;
+  char host[100];
+  bool secure = true; // Default to secure
+  unsigned hostlen = sizeof(host);
+  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){ // Let me know if you need the host too!
+    Serial.println("Parsing error!");
+    Serial.println(host);
+    return;
   }
-  host = hostFrom(screenUrl);
-  String request;
-  request  = "POST " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(host) + "\r\n";
-  if (bearer != "") {
-    request += "Authorization: Bearer "+bearer+ "\r\n";
-  }
+  Serial.print("Path is ");
+  Serial.println(path);
+  Serial.print("Secure is ");
+  Serial.println(secure);
 
-#ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+IpAddress2String(WiFi.localIP());
-  request += "Content-Type: application/x-www-form-urlencoded\r\n";
-  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
-  request += localIp +"\r\n";
-#endif
+  String request;
+  request  = "GET " + String(path) + " HTTP/1.1\r\n";
+  request += "Host: " + String(host) + "\r\n";
+  request += "Connection: close\r\n";
   request += "\r\n";
-  
-  Serial.println("REQUEST: "+request);
-  // Send the http request to the server
+  Serial.println(request);
+  //Serial.println(String(host)+screenPath);
+
   client.connect(host, 80);
-  client.print(request);
+  client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
   
