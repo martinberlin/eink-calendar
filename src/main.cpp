@@ -58,12 +58,6 @@ GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
 
-
-// Determine path and schema (http vs https)
-char *path;
-bool secure = true;
-char * host;
-
 char * hostFrom(char url[]) {
   char * pch;
   pch = strtok (url,"/");
@@ -159,13 +153,19 @@ String IpAddress2String(const IPAddress& ipAddress)
 }
 
 
-void handleWebToDisplay() {
+void handleWebToDisplay(char screenUrl[], String bearer) {
   int millisIni = millis();
-  // Copy the screenUrl[] in a new char:
-  char *url_copy = strdup(screenUrl);
-
-  if(!parsePathInformation(url_copy, &path, &secure)){
-      Serial.println("Parsing error with given screenUrl");
+  // Determine schema (http vs https), Host and /Route
+  char *path;
+  bool secure = true;
+  char * host;
+  // Copy the screen1[] in a new char pointer:
+  char *url = strdup(screenUrl);
+  Serial.println(String(url));
+  Serial.println(screenUrl);
+  
+  if(!parsePathInformation(url, &path, &secure)){
+      Serial.println("Parsing error with given url");
       return;
   }
   host = hostFrom(screenUrl);
@@ -340,7 +340,7 @@ void button_handle(uint8_t gpio)
 #if BUTTON_2
     case BUTTON_2: {
         Serial.printf("Show Num: %d font\n", BUTTON_2);
-        handleWebToDisplay();
+        handleWebToDisplay(screen1, bearer1);
     }
     break;
 #endif
@@ -397,7 +397,7 @@ void setup() {
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED && connectTries<6) {
-    Serial.print(" .");
+    Serial.print(".");
     delay(500);
     connectTries++;
   }
@@ -405,10 +405,9 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     button_init();
-    Serial.println("ONLINE");
-    Serial.println(WiFi.localIP());
-    delay(999);
-    handleWebToDisplay();
+    Serial.printf("ONLINE: %s\n", IpAddress2String(WiFi.localIP()));
+    
+    handleWebToDisplay(screen1, bearer1);
 
   } else {
     // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
