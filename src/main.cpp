@@ -2,15 +2,50 @@
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
-#elif ESP8266
-  #include <ESP8266WiFi.h>
-  #include <ESP8266mDNS.h>
-  #include <DNSServer.h>
+  // MP3 example
+  #include "HTTPClient.h" // Needed because of ESP8266 dependencies, not used
+  #include "SD.h"         // Needed because of ESP8266 dependencies, not used
+  #include "SPIFFS.h"
+  #include "AudioFileSourceSPIFFS.h"
+  #include "AudioFileSourceID3.h"
+  #include "AudioGeneratorMP3.h"
+  #include "AudioOutputI2SNoDAC.h"
 #endif
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
 #include <Button2.h>
+
+
+// MP3 Demo: To run, set your ESP32 build to 160MHz, and include a SPIFFS of 512KB or greater ( pio run --target uploadfs )
+// pno_cs from https://ccrma.stanford.edu/~jos/pasp/Sound_Examples.html
+AudioGeneratorMP3 *mp3;
+AudioFileSourceSPIFFS *file;
+AudioOutputI2S *out;
+AudioFileSourceID3 *id3;
+bool playAudio = false;
+// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
+void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
+{
+  (void)cbData;
+  Serial.printf("ID3 callback for: %s = '", type);
+
+  if (isUnicode) {
+    string += 2;
+  }
+  
+  while (*string) {
+    char a = *(string++);
+    if (isUnicode) {
+      string++;
+    }
+    Serial.printf("%c", a);
+  }
+  Serial.printf("'\n");
+  Serial.flush();
+}
+
+// BUTTON Config
 Button2 *pBtns = nullptr;
 uint8_t g_btns[] = BUTTONS_MAP;
 // Get the right interface for the display
@@ -321,6 +356,18 @@ while (client.available()) {
   }     
 }
 
+void playMp3(char * mp3file) {
+  audioLogger = &Serial;
+  file = new AudioFileSourceSPIFFS(mp3file);
+  id3 = new AudioFileSourceID3(file);
+  id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+  //out = new AudioOutputI2SNoDAC();
+  out = new AudioOutputI2S();
+  out->SetPinout(IIS_BCK, IIS_WS, IIS_DOUT);
+  mp3 = new AudioGeneratorMP3();
+  mp3->begin(id3, out);
+}
+
 void button_handle(uint8_t gpio)
 {
     switch (gpio) {
@@ -354,11 +401,21 @@ void button_handle(uint8_t gpio)
 
 #if BUTTON_3
     case BUTTON_3: {
-       Serial.printf("Clicked: %d \n", BUTTON_3);
-        if (selectedScreen != 3) {
+       
+       Serial.printf("Clicked: %d\n", BUTTON_3);
+      if (playAudio) {
+        Serial.println("Play audio");
+        playMp3("/pno-cs.mp3");
+      } else {
+        mp3->stop();
+        Serial.println("Stop audio");
+      }
+       playAudio = !playAudio;
+      //Extra Screen?
+        /* if (selectedScreen != 3) {
            handleWebToDisplay(screen3, bearer3);
            selectedScreen = 3;
-        }
+        } */
     }
     break;
 #endif
@@ -392,46 +449,65 @@ void button_loop()
         pBtns[i].loop();
     }
 }
-void loop() {
-  delay(1);
-  button_loop();
 
+
+
+void loop() {
+
+  if (playAudio) {
+    if (mp3->isRunning()) {
+      mp3->loop();
+      //if (!mp3->loop()) mp3->stop(); // Hangs everything
+    }
+  }
+  
+  button_loop();
 }
 
-void setup() {
-  Serial.begin(115200);
 
-  display.init();
-  display.setRotation(eink_rotation); // Rotates display N times clockwise
-  display.setFont(&FreeMonoBold12pt7b);
-  display.setTextColor(GxEPD_BLACK);
-  uint8_t connectTries = 0;
+
+void postSetup() {
+uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<6) {
+
+
+  while (WiFi.status() != WL_CONNECTED && connectTries<9) {
     Serial.print(".");
     delay(500);
     connectTries++;
   }
-
-
   if (WiFi.status() == WL_CONNECTED) {
     button_init();
     Serial.printf("ONLINE: %s\n", IpAddress2String(WiFi.localIP()));
-    
-    handleWebToDisplay(screen1, bearer1);
-
+    //handleWebToDisplay(screen1, bearer1);
   } else {
-    // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
-    uint8_t secs = 2;
-    display.powerDown();
+    Serial.println("Restarting...");ESP.restart();
+  }
+  
+}
 
-      #ifdef ESP32
-        Serial.printf("Going to sleep %d seconds\n", secs);
-        esp_sleep_enable_timer_wakeup(secs * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(1800e6);
-      #endif
-      }
+void setup() {
+  Serial.begin(115200);
+  
+  if (!SPIFFS.begin()) {
+    Serial.println("FILESYSTEM is not initialized");
+    Serial.println("Please use: pio run --target uploadfs");
+    delay(5000);ESP.restart();
+  }
+
+  // Turn on the Amplifier:
+  pinMode(AMP_POWER_CTRL, OUTPUT);
+  digitalWrite(AMP_POWER_CTRL, HIGH);
+  
+  display.init();
+  display.setRotation(eink_rotation); // Rotates display N times clockwise
+  display.setFont(&FreeMonoBold12pt7b);
+  display.setTextColor(GxEPD_BLACK);
+
+  //playMp3("/pno-cs.mp3");
+  //playMp3("/monster-slap.mp3"); Does not work at all
+
+  postSetup(); // WiFi and extra initialization
+
+
 }
