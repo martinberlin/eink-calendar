@@ -379,7 +379,7 @@ void setup() {
     handleWebToDisplay();
   } else {
     // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
-    int secs = 180;
+    uint8_t secs = 9;
     display.powerDown();
 
       #ifdef ESP32

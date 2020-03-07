@@ -1,63 +1,39 @@
 #include <WString.h>
 
-// In cale branch this URL represents the final image URL. 
-// --> https://cale.es <--  Get in CALE your image URL
-char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
-// Private Screen Token. Leave as "" if the screen is public
-String bearer="";
+char screenUrl[] = "http://img.cale.es/bmp/USERNAME/SCREENID";
+String bearer = "";
 
-// Your WiFi Credentials
-#define WIFI_SSID "Your WiFi Name"
-#define WIFI_PASS ""
+#define WIFI_SSID "KabelBox-A210"
+#define WIFI_PASS "14237187131701431551"
 
-// E-ink SPI
-// ESP8266          |  ESP32 GPIO in comments
-int8_t EINK_CS = 5;    // 5
-int8_t EINK_DC = 0;    // 17
-int8_t EINK_RST = 2;   // 16
-int8_t EINK_BUSY = 12; // 4
+// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
+#define ENABLE_INTERNAL_IP_LOG
 
-// Sent to display.setRotation(eink_rotation) method in gxEPD
-int8_t eink_rotation = 0;
-
-// SELECT YOUR E-INK Model uncommenting only one line  (For more info check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display )
-// Note: The V1 version of 7.5" Waveshare works for ESP8266. But the V2 with 800*480 pixels, could not make it work, requires too much memory. In ESP32 works fine
-
-//#define GDEW042T2
-//#define GDEW075T8    // 7.5" b/w 640x383
-//#define GDEW075T7    // 7.5" b/w 800x480
-//#define GDEP015OC1   // 1.54" b/w
-//#define GDEW0213I5F  // 2.13" b/w 104x212 flexible
+#define GDEH0213B73
+uint8_t eink_rotation=3;
 //#define GDE0213B1    // 2.13" b/w
 //#define GDEH0213B72  // 2.13" b/w new panel
-//#define GDEH0213B73  // 2.13" b/w newer panel
+//#define GDEH0213B73  // 2.13" b/w newer panel TTGO T5 -->Tester
+//#define GDE0213B72B // only on TTGO Fork from gxEPD
 //#define GDEW0213Z16  // 2.13" b/w/r
 //#define GDEH029A1    // 2.9" b/w
 //#define GDEW029T5    // 2.9" b/w IL0373
 //#define GDEW029Z10   // 2.9" b/w/r
-//#define GDEW026T0    // 2.6" b/w
-//#define GDEW027C44   // 2.7" b/w/r
-//#define GDEW027W3    // 2.7" b/w
-//#define GDEW0371W7   // 3.7" b/w
-//#define GDEW042Z15   // 4.2" b/w/r
-//#define GDEW0583T7   // 5.83" b/w
-//#define GDEW075Z09   // 7.5" b/w/r 640x383
-//#define GDEW075Z08   // 7.5" b/w/r 800x480
 
-// Deepsleep configuration
+// 2.13 T5
+int8_t EINK_CS = 5;
+int8_t EINK_RST  = 16;
+int8_t EINK_DC   = 17;
+int8_t EINK_BUSY = 4;   
+
+#define AMP_POWER_CTRL 19
+
+
+// Uncomment this to enable deepsleep 
 #define DEEPSLEEP_ENABLED
-// Note: ESP8266 is not using this but 3 hrs fixed in the code since is the max time (search: 10800e6 in main.cpp)
-uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
-// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
-#define ENABLE_INTERNAL_IP_LOG
-// ESP server will be online for: 
-#define SLEEP_AFTER_SECONDS 60 
 
-/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
-CLK  = D8;
-DIN  = D7;
-BUSY = D6;
-CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select since it can be used to wake up from deepsleep connected to RST
-DC   = D3;
-RST  = D4; 
-*/
+// To get Max deepsleep in ESP8266 use ESP.deepSleepMax()
+// Last ESP8266: 3900*3  (3Hrs 5min) // 3600*9
+uint64_t DEEPSLEEP_SECONDS = 3600*6;
+
+#define SLEEP_AFTER_SECONDS 1
