@@ -40,7 +40,7 @@ uint8_t g_btns[] = BUTTONS_MAP;
 
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
-
+uint8_t selectedScreen = 1;
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>
@@ -159,12 +159,10 @@ void handleWebToDisplay(char screenUrl[], String bearer) {
   char *path;
   bool secure = true;
   char * host;
-  // Copy the screen1[] in a new char pointer:
-  char *url = strdup(screenUrl);
-  Serial.println(String(url));
+ 
   Serial.println(screenUrl);
-  
-  if(!parsePathInformation(url, &path, &secure)){
+
+  if(!parsePathInformation(strdup(screenUrl), &path, &secure)){
       Serial.println("Parsing error with given url");
       return;
   }
@@ -328,6 +326,12 @@ void button_handle(uint8_t gpio)
     switch (gpio) {
 #if BUTTON_1
     case BUTTON_1: {
+        Serial.printf("Clicked: %d \n", BUTTON_1);
+        if (selectedScreen != 1) {
+           handleWebToDisplay(screen1, bearer1);
+           selectedScreen = 1;
+        }
+
         esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
         esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
         Serial.println("Going to sleep now");
@@ -339,15 +343,22 @@ void button_handle(uint8_t gpio)
 
 #if BUTTON_2
     case BUTTON_2: {
-        Serial.printf("Show Num: %d font\n", BUTTON_2);
-        handleWebToDisplay(screen1, bearer1);
+        Serial.printf("Clicked: %d \n", BUTTON_2);
+        if (selectedScreen != 2) {
+           handleWebToDisplay(screen2, bearer2);
+           selectedScreen = 2;
+        }
     }
     break;
 #endif
 
 #if BUTTON_3
     case BUTTON_3: {
-       Serial.printf("Show Num: %d font\n", BUTTON_3);
+       Serial.printf("Clicked: %d \n", BUTTON_3);
+        if (selectedScreen != 3) {
+           handleWebToDisplay(screen3, bearer3);
+           selectedScreen = 3;
+        }
     }
     break;
 #endif

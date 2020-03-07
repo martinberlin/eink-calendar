@@ -1,10 +1,17 @@
 #include <WString.h>
 
-char screenUrl[] = "http://img.cale.es/bmp/USERNAME/SCREENID";
-String bearer = "";
+// Each button corresponds to a Screen in --> CALE.es <-- Register to try it out!
+char screen1[] = "http://img.cale.es/bmp/USERNAME/SCREENID";
+String bearer1 = "cb79cd9e55121ff8f90a28c1ee8353dc53dc27131d87_YOUR_TOKEN";
+
+char screen2[] = "http://cale.es";
+String bearer2 = "";
+
+char screen3[] = "http://cale.es";
+String bearer3 = "";
 
 #define WIFI_SSID "KabelBox-A210"
-#define WIFI_PASS "14237187131701431551"
+#define WIFI_PASS ""
 
 // Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
 #define ENABLE_INTERNAL_IP_LOG
