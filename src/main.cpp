@@ -21,7 +21,7 @@
 // pno_cs from https://ccrma.stanford.edu/~jos/pasp/Sound_Examples.html
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSPIFFS *file;
-AudioOutputI2S *out;
+AudioOutputI2SNoDAC *out;
 AudioFileSourceID3 *id3;
 bool playAudio = false;
 // Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
@@ -75,14 +75,13 @@ uint8_t g_btns[] = BUTTONS_MAP;
 
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
-uint8_t selectedScreen = 1;
+uint8_t selectedScreen = 0;
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
 bool debugMode = false;
-
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
 
@@ -92,6 +91,13 @@ GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
+
+void displayInit() {
+  display.init();
+  display.setRotation(eink_rotation); // Rotates display N times clockwise
+  display.setFont(&FreeMonoBold12pt7b);
+  display.setTextColor(GxEPD_BLACK);
+}
 
 char * hostFrom(char url[]) {
   char * pch;
@@ -361,9 +367,9 @@ void playMp3(char * mp3file) {
   file = new AudioFileSourceSPIFFS(mp3file);
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-  //out = new AudioOutputI2SNoDAC();
-  out = new AudioOutputI2S();
+  out = new AudioOutputI2SNoDAC();
   out->SetPinout(IIS_BCK, IIS_WS, IIS_DOUT);
+
   mp3 = new AudioGeneratorMP3();
   mp3->begin(id3, out);
 }
@@ -373,23 +379,27 @@ void button_handle(uint8_t gpio)
     switch (gpio) {
 #if BUTTON_1
     case BUTTON_1: {
-        Serial.printf("Clicked: %d \n", BUTTON_1);
+      Serial.printf("Clicked: %d \n", BUTTON_1);
+      displayInit();
+      delay(200);
+        
         if (selectedScreen != 1) {
            handleWebToDisplay(screen1, bearer1);
            selectedScreen = 1;
         }
 
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
+        /* esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
         esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
         Serial.println("Going to sleep now");
         delay(2000);
-        esp_deep_sleep_start();
+        esp_deep_sleep_start(); */
     }
     break;
 #endif
 
 #if BUTTON_2
     case BUTTON_2: {
+      displayInit();
         Serial.printf("Clicked: %d \n", BUTTON_2);
         if (selectedScreen != 2) {
            handleWebToDisplay(screen2, bearer2);
@@ -401,9 +411,8 @@ void button_handle(uint8_t gpio)
 
 #if BUTTON_3
     case BUTTON_3: {
-       
        Serial.printf("Clicked: %d\n", BUTTON_3);
-      if (playAudio) {
+      if (!playAudio) {
         Serial.println("Play audio");
         playMp3("/pno-cs.mp3");
       } else {
@@ -415,7 +424,7 @@ void button_handle(uint8_t gpio)
         /* if (selectedScreen != 3) {
            handleWebToDisplay(screen3, bearer3);
            selectedScreen = 3;
-        } */
+        }  */
     }
     break;
 #endif
@@ -455,10 +464,9 @@ void button_loop()
 void loop() {
 
   if (playAudio) {
-    if (mp3->isRunning()) {
-      mp3->loop();
-      //if (!mp3->loop()) mp3->stop(); // Hangs everything
-    }
+      if (mp3->isRunning()) {
+        if (!mp3->loop()) mp3->stop();
+      }
   }
   
   button_loop();
@@ -467,9 +475,8 @@ void loop() {
 
 
 void postSetup() {
-uint8_t connectTries = 0;
+  uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-
 
   while (WiFi.status() != WL_CONNECTED && connectTries<9) {
     Serial.print(".");
@@ -477,7 +484,6 @@ uint8_t connectTries = 0;
     connectTries++;
   }
   if (WiFi.status() == WL_CONNECTED) {
-    button_init();
     Serial.printf("ONLINE: %s\n", IpAddress2String(WiFi.localIP()));
     //handleWebToDisplay(screen1, bearer1);
   } else {
@@ -489,25 +495,21 @@ uint8_t connectTries = 0;
 void setup() {
   Serial.begin(115200);
   
+  // Turn on the Amplifier:
+  pinMode(AMP_POWER_CTRL, OUTPUT);
+  digitalWrite(AMP_POWER_CTRL, HIGH);
+
   if (!SPIFFS.begin()) {
     Serial.println("FILESYSTEM is not initialized");
     Serial.println("Please use: pio run --target uploadfs");
     delay(5000);ESP.restart();
   }
 
-  // Turn on the Amplifier:
-  pinMode(AMP_POWER_CTRL, OUTPUT);
-  digitalWrite(AMP_POWER_CTRL, HIGH);
-  
-  display.init();
-  display.setRotation(eink_rotation); // Rotates display N times clockwise
-  display.setFont(&FreeMonoBold12pt7b);
-  display.setTextColor(GxEPD_BLACK);
-
-  //playMp3("/pno-cs.mp3");
-  //playMp3("/monster-slap.mp3"); Does not work at all
-
+  button_init();
   postSetup(); // WiFi and extra initialization
 
+  /* playAudio = true;
+  char * mp3file = "/pno-cs.mp3";
+  playMp3(mp3file); */
 
 }
