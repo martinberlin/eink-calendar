@@ -10,7 +10,9 @@
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
-
+#include <Button2.h>
+Button2 *pBtns = nullptr;
+uint8_t g_btns[] = BUTTONS_MAP;
 // Get the right interface for the display
 #ifdef GDEW042T2
   #include <GxGDEW042T2/GxGDEW042T2.h>
@@ -34,22 +36,6 @@
   #include <GxGDEW029T5/GxGDEW029T5.h>
   #elif defined(GDEW029Z10)
   #include <GxGDEW029Z10/GxGDEW029Z10.h>
-  #elif defined(GDEW026T0)
-  #include <GxGDEW026T0/GxGDEW026T0.h>
-  #elif defined(GDEW027C44)
-  #include <GxGDEW027C44/GxGDEW027C44.h>
-  #elif defined(GDEW027W3)
-  #include <GxGDEW027W3/GxGDEW027W3.h>
-  #elif defined(GDEW0371W7)
-  #include <GxGDEW0371W7/GxGDEW0371W7.h>
-  #elif defined(GDEW042Z15)
-  #include <GxGDEW042Z15/GxGDEW042Z15.h>
-  #elif defined(GDEW0583T7)
-  #include <GxGDEW0583T7/GxGDEW0583T7.h>
-  #elif defined(GDEW075Z09)
-  #include <GxGDEW075Z09/GxGDEW075Z09.h>
-  #elif defined(GDEW075Z08)
-  #include <GxGDEW075Z08/GxGDEW075Z08.h>
 #endif
 
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
@@ -90,6 +76,9 @@ char * hostFrom(char url[]) {
   }
   return pch;
 }
+
+
+
 
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
@@ -334,25 +323,67 @@ while (client.available()) {
   }     
 }
 
-void loop() {
-
-  // Note: Enable deepsleep only as last step when all the rest is working as you expect
-#ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      display.powerDown();
-      delay(10);
-      #ifdef ESP32
-        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+void button_handle(uint8_t gpio)
+{
+    switch (gpio) {
+#if BUTTON_1
+    case BUTTON_1: {
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
+        esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
+        Serial.println("Going to sleep now");
+        delay(2000);
         esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
-      #endif
-  }
-  secondsToDeepsleep++;
-  delay(1000);
+    }
+    break;
 #endif
+
+#if BUTTON_2
+    case BUTTON_2: {
+        Serial.printf("Show Num: %d font\n", BUTTON_2);
+        handleWebToDisplay();
+    }
+    break;
+#endif
+
+#if BUTTON_3
+    case BUTTON_3: {
+       Serial.printf("Show Num: %d font\n", BUTTON_3);
+    }
+    break;
+#endif
+    default:
+        break;
+    }
+}
+void button_callback(Button2 &b)
+{
+    for (int i = 0; i < sizeof(g_btns) / sizeof(g_btns[0]); ++i) {
+        if (pBtns[i] == b) {
+            Serial.printf("btn: %u press\n", pBtns[i].getAttachPin());
+            button_handle(pBtns[i].getAttachPin());
+        }
+    }
+}
+
+void button_init()
+{
+    uint8_t args = sizeof(g_btns) / sizeof(g_btns[0]);
+    pBtns = new Button2[args];
+    for (int i = 0; i < args; ++i) {
+        pBtns[i] = Button2(g_btns[i]);
+        pBtns[i].setPressedHandler(button_callback);
+    }
+}
+
+void button_loop()
+{
+    for (int i = 0; i < sizeof(g_btns) / sizeof(g_btns[0]); ++i) {
+        pBtns[i].loop();
+    }
+}
+void loop() {
+  delay(1);
+  button_loop();
 
 }
 
@@ -373,13 +404,15 @@ void setup() {
 
 
   if (WiFi.status() == WL_CONNECTED) {
+    button_init();
     Serial.println("ONLINE");
     Serial.println(WiFi.localIP());
     delay(999);
     handleWebToDisplay();
+
   } else {
     // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
-    uint8_t secs = 9;
+    uint8_t secs = 2;
     display.powerDown();
 
       #ifdef ESP32
