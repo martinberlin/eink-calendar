@@ -71,10 +71,13 @@ uint32_t read32()
   return result;
 }
 
-bool parsePathInformation(char *url, char **path, bool *secure){
+bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len, bool *secure){
   if(url==NULL){
     return false;
   }
+  char *host_start = NULL;
+  bool path_resolved = false;
+  unsigned hostname_length = 0;
   for(unsigned i = 0; i < strlen(url); i++){
     switch (url[i])
     {
@@ -90,11 +93,25 @@ bool parsePathInformation(char *url, char **path, bool *secure){
           *secure = true;
         }
         i = i + 2; // Move our cursor out of the schema into the domain
+        host_start = &url[i+1];
+        hostname_length = 0;
         continue;
       }
       break;
     case '/': // We know if we skipped the schema, than the first / will be the start of the path
       *path = &url[i];
+      path_resolved = true;
+      break;
+    }
+    if(path_resolved){
+      break;
+    }
+    ++hostname_length;
+  }
+  if(host_start!=NULL&&*path!=NULL&&*host_len>hostname_length){
+    memcpy(host, host_start, hostname_length);
+    host[hostname_length] = NULL;
+    if(path_resolved){
       return true;
     }
   }
@@ -106,9 +123,12 @@ void handleWebToDisplay() {
   int millisIni = millis();
 
   char *path;
+  char host[100];
   bool secure = true; // Default to secure
-  if(!parsePathInformation(screenUrl, &path, &secure)){ // Let me know if you need the host too!
+  unsigned hostlen = sizeof(host);
+  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){ // Let me know if you need the host too!
     Serial.println("Parsing error!");
+    Serial.println(host);
     return;
   }
   Serial.print("Path is ");
@@ -118,13 +138,13 @@ void handleWebToDisplay() {
 
   String request;
   request  = "GET " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(screenshotHost) + "\r\n";
+  request += "Host: " + String(host) + "\r\n";
   request += "Connection: close\r\n";
   request += "\r\n";
   Serial.println(request);
   //Serial.println(String(host)+screenPath);
 
-  client.connect(screenshotHost, 80);
+  client.connect(host, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
