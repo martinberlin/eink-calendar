@@ -15,9 +15,25 @@ String bearer3 = "";
 
 // Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
 #define ENABLE_INTERNAL_IP_LOG
+// Buttons
+#define BUTTON_1 38
+#define BUTTON_2 37
+#define BUTTON_3 39
+#define BUTTONS_MAP \
+    {               \
+        38, 37, 39  \
+    }
 
 #define GDEH0213B73
 uint8_t eink_rotation=3;
+
+// Audio PINs
+#define IIS_BCK 26
+#define IIS_WS  18
+#define IIS_DOUT 25
+// Amplifier
+#define AMP_POWER_CTRL 19
+
 //#define GDE0213B1    // 2.13" b/w
 //#define GDEH0213B72  // 2.13" b/w new panel
 //#define GDEH0213B73  // 2.13" b/w newer panel TTGO T5 -->Tester
@@ -27,20 +43,8 @@ uint8_t eink_rotation=3;
 //#define GDEW029T5    // 2.9" b/w IL0373
 //#define GDEW029Z10   // 2.9" b/w/r
 
-// 2.13 T5
+// 2.13 T5 v2.4
 int8_t EINK_CS = 5;
 int8_t EINK_RST  = 16;
 int8_t EINK_DC   = 17;
-int8_t EINK_BUSY = 4;   
-
-#define AMP_POWER_CTRL 19
-
-
-// Uncomment this to enable deepsleep 
-#define DEEPSLEEP_ENABLED
-
-// To get Max deepsleep in ESP8266 use ESP.deepSleepMax()
-// Last ESP8266: 3900*3  (3Hrs 5min) // 3600*9
-uint64_t DEEPSLEEP_SECONDS = 3600*6;
-
-#define SLEEP_AFTER_SECONDS 1
+int8_t EINK_BUSY = 4;  
