@@ -10,9 +10,48 @@
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
-// Please check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display
-// Note: The V1 version of 7.5" Waveshare works for ESP8266. Not sure the new V2 with 800*480 pixels, could not make it work. In ESP32 works fine
-#include <GxGDEW075T7/GxGDEW075T7.cpp>
+
+// Get the right interface for the display
+#ifdef GDEW042T2
+  #include <GxGDEW042T2/GxGDEW042T2.h>
+  #elif defined(GDEW075T8)
+  #include <GxGDEW075T8/GxGDEW075T8.h>
+  #elif defined(GDEW075T7)
+  #include <GxGDEW075T7/GxGDEW075T7.h> 
+  #elif defined(GDEW0213I5F)
+  #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
+  #elif defined(GDE0213B1)
+  #include <GxGDE0213B1/GxGDE0213B1.h>
+  #elif defined(GDEH0213B72)
+  #include <GxGDEH0213B72/GxGDEH0213B72.h>
+  #elif defined(GDEH0213B73)
+  #include <GxGDEH0213B73/GxGDEH0213B73.h>
+  #elif defined(GDEW0213Z16)
+  #include <GxGDEW0213Z16/GxGDEW0213Z16.h>
+  #elif defined(GDEH029A1)
+  #include <GxGDEH029A1/GxGDEH029A1.h>
+  #elif defined(GDEW029T5)
+  #include <GxGDEW029T5/GxGDEW029T5.h>
+  #elif defined(GDEW029Z10)
+  #include <GxGDEW029Z10/GxGDEW029Z10.h>
+  #elif defined(GDEW026T0)
+  #include <GxGDEW026T0/GxGDEW026T0.h>
+  #elif defined(GDEW027C44)
+  #include <GxGDEW027C44/GxGDEW027C44.h>
+  #elif defined(GDEW027W3)
+  #include <GxGDEW027W3/GxGDEW027W3.h>
+  #elif defined(GDEW0371W7)
+  #include <GxGDEW0371W7/GxGDEW0371W7.h>
+  #elif defined(GDEW042Z15)
+  #include <GxGDEW042Z15/GxGDEW042Z15.h>
+  #elif defined(GDEW0583T7)
+  #include <GxGDEW0583T7/GxGDEW0583T7.h>
+  #elif defined(GDEW075Z09)
+  #include <GxGDEW075Z09/GxGDEW075Z09.h>
+  #elif defined(GDEW075Z08)
+  #include <GxGDEW075Z08/GxGDEW075Z08.h>
+#endif
+
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
@@ -25,7 +64,6 @@ bool debugMode = false;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
-//String message;
 
 // SPI interface GPIOs defined in Config.h  
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
@@ -33,6 +71,25 @@ GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
+
+
+// Determine path and schema (http vs https)
+char *path;
+bool secure = true;
+char * host;
+
+char * hostFrom(char url[]) {
+  char * pch;
+  pch = strtok (url,"/");
+  __uint8_t p = 0;
+  while (pch)
+  {
+    if (p==1) break;
+    pch = strtok (NULL, "/");
+    p++;
+  }
+  return pch;
+}
 
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
@@ -118,9 +175,22 @@ bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len
   return false;
 }
 
+/**
+ * Convert the internal IP to string
+ */
+String IpAddress2String(const IPAddress& ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3]);
+}
+
 
 void handleWebToDisplay() {
   int millisIni = millis();
+  // Copy the screenUrl[] in a new char:
+  char *url_copy = strdup(screenUrl);
 
   char *path;
   char host[100];
@@ -161,7 +231,7 @@ void handleWebToDisplay() {
   int displayWidth = display.width();
   int displayHeight= display.height();// Not used now
   uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-  long bytesRead = 32; // summing the whole BMP info headers
+  long bytesRead = 34; // summing the whole BMP info headers
   long count = 0;
   uint8_t lastByte = 0x00;
 
@@ -312,7 +382,7 @@ void setup() {
   display.setTextColor(GxEPD_BLACK);
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<20) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<6) {
     Serial.print(" .");
     delay(500);
     connectTries++;
@@ -325,8 +395,17 @@ void setup() {
     delay(999);
     handleWebToDisplay();
   } else {
-    Serial.printf("Going to sleep %d seconds\n", 120);
-    esp_sleep_enable_timer_wakeup(120 * USEC);
-    esp_deep_sleep_start();
+    // There is no WiFi. Leave this at least in 600 seconds so it will retry in 10 minutes. As default half an hour:
+    int secs = 180;
+    display.powerDown();
+
+      #ifdef ESP32
+        Serial.printf("Going to sleep %d seconds\n", secs);
+        esp_sleep_enable_timer_wakeup(secs * USEC);
+        esp_deep_sleep_start();
+      #elif ESP8266
+        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+        ESP.deepSleep(1800e6);
+      #endif
       }
 }
