@@ -72,25 +72,6 @@ GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
 
-
-// Determine path and schema (http vs https)
-char *path;
-bool secure = true;
-char * host;
-
-char * hostFrom(char url[]) {
-  char * pch;
-  pch = strtok (url,"/");
-  __uint8_t p = 0;
-  while (pch)
-  {
-    if (p==1) break;
-    pch = strtok (NULL, "/");
-    p++;
-  }
-  return pch;
-}
-
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
   Serial.println("DISPLAY prints: "+message);
@@ -189,14 +170,11 @@ String IpAddress2String(const IPAddress& ipAddress)
 
 void handleWebToDisplay() {
   int millisIni = millis();
-  // Copy the screenUrl[] in a new char:
-  char *url_copy = strdup(screenUrl);
-
   char *path;
   char host[100];
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
-  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){ // Let me know if you need the host too!
+  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
     Serial.println("Parsing error!");
     Serial.println(host);
     return;
