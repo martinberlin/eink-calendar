@@ -24,6 +24,13 @@ AudioFileSourceSPIFFS *file;
 AudioOutputI2SNoDAC *out;
 AudioFileSourceID3 *id3;
 bool playAudio = false;
+
+// Sounds, place yours in data: 
+char voice_cale[] = "/cale.mp3";
+char voice_one[] = "/1.mp3";
+char voice_two[] = "/2.mp3";
+char voice_three[] = "/3.mp3";
+
 // Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
 void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
 {
@@ -106,19 +113,6 @@ void displayInit() {
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
-}
-
-char * hostFrom(char url[]) {
-  char * pch;
-  pch = strtok (url,"/");
-  __uint8_t p = 0;
-  while (pch)
-  {
-    if (p==1) break;
-    pch = strtok (NULL, "/");
-    p++;
-  }
-  return pch;
 }
 
 // Displays message doing a partial update
@@ -387,6 +381,7 @@ while (client.available()) {
 }
 
 void playMp3(char * mp3file) {
+  amplifierHigh();
   audioLogger = &Serial;
   file = new AudioFileSourceSPIFFS(mp3file);
   id3 = new AudioFileSourceID3(file);
@@ -404,12 +399,25 @@ void button_handle(uint8_t gpio)
 #if BUTTON_1
     case BUTTON_1: {
       Serial.printf("Clicked: %d \n", BUTTON_1);
+      #ifdef ENABLE_SOUNDS
+      playMp3(voice_one);
+      while (1) {
+        if (mp3->isRunning()) {
+            if (!mp3->loop())
+                mp3->stop();
+        } else {
+            break;
+        }
+      }
+      amplifierLow();
+      #endif
+
       displayInit();
         if (selectedScreen != 1) {
            handleWebToDisplay(screen1, bearer1);
            selectedScreen = 1;
         }
-
+    // If you want to use a button for "deepsleep" this may be a great place: 
         /* esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
         esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
         Serial.println("Going to sleep now");
@@ -421,6 +429,19 @@ void button_handle(uint8_t gpio)
 
 #if BUTTON_2
     case BUTTON_2: {
+      #ifdef ENABLE_SOUNDS
+      playMp3(voice_two);
+      while (1) {
+        if (mp3->isRunning()) {
+            if (!mp3->loop())
+                    mp3->stop();
+            } else {
+                break;
+            }
+      }
+      amplifierLow();
+      #endif
+
       displayInit();
         Serial.printf("Clicked: %d \n", BUTTON_2);
         if (selectedScreen != 2) {
@@ -433,25 +454,26 @@ void button_handle(uint8_t gpio)
 
 #if BUTTON_3
     case BUTTON_3: {
-       Serial.printf("Clicked: %d\n", BUTTON_3);
+      Serial.printf("Clicked: %d\n", BUTTON_3);
+      #ifdef ENABLE_SOUNDS
+      playMp3(voice_three);
+      while (1) {
+        if (mp3->isRunning()) {
+            if (!mp3->loop())
+                    mp3->stop();
+            } else {
+                break;
+            }
+      }
+      amplifierLow();
+      #endif
       //Extra Screen?
-      /* displayInit();
+      
+      displayInit();
         if (selectedScreen != 3) {
            handleWebToDisplay(screen3, bearer3);
            selectedScreen = 3;
-        }  */
-
-      if (!playAudio) {
-        amplifierHigh();
-        Serial.println("Play audio");
-        playMp3("/pno-cs.mp3");
-      } else {
-        mp3->stop();
-        amplifierLow();
-        Serial.println("Stop audio");
-      }
-       playAudio = !playAudio;
-
+        }
     }
     break;
 #endif
@@ -489,17 +511,17 @@ void button_loop()
 
 
 void loop() {
+  button_loop();
 
-  if (playAudio) {
+  // In case of using a button to stream internet radio:
+  /* if (playAudio) {
       if (mp3->isRunning()) {
         if (!mp3->loop()) {
           mp3->stop();
           delete(mp3);
           }
       }
-  }
-  
-  button_loop();
+  } */
 }
 
 
@@ -517,17 +539,27 @@ void postSetup() {
     Serial.print("ONLINE: ");
     Serial.println(WiFi.localIP());
     
-    //displayInit();
-    //handleWebToDisplay(screen1, bearer1);
+    playMp3(voice_cale);
+    while (1) {
+      if (mp3->isRunning()) {
+          if (!mp3->loop())
+                  mp3->stop();
+          } else {
+              break;
+          }
+    }
+    amplifierLow();
+    displayInit();
+    handleWebToDisplay(screen1, bearer1);
   } else {
-    Serial.println("Restarting...");ESP.restart();
+    Serial.println("Could not connect, restarting...");ESP.restart();
   }
   
 }
 
 void setup() {
   Serial.begin(115200);
-  amplifierHigh();
+  
   if (!SPIFFS.begin()) {
     Serial.println("FILESYSTEM is not initialized");
     Serial.println("Please use: pio run --target uploadfs");
@@ -536,9 +568,4 @@ void setup() {
 
   button_init();
   postSetup(); // WiFi and extra initialization
-
-  /* playAudio = true;
-  char * mp3file = "/welcome.mp3";
-  playMp3(mp3file); */
-
 }
