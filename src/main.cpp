@@ -290,14 +290,14 @@ while (client.available()) {
     uint16_t planes = read16();
     uint16_t depth = read16(); // bits per pixel
     uint32_t format = read32();
-    
+    #ifdef ENABLE_IMAGE_DEBUG
       Serial.print("->BMP starts here. File size: "); Serial.println(fileSize);
       Serial.print("Image Offset: "); Serial.println(imageOffset);
       Serial.print("Header size: "); Serial.println(headerSize);
       Serial.print("Width * Height: "); Serial.print(String(width) + " x " + String(height));
       Serial.print(" / Bit Depth: "); Serial.println(depth);
       Serial.print("Planes: "); Serial.println(planes);Serial.print("Format: "); Serial.println(format);
-    
+    #endif
     if ((planes == 1) && (format == 0 || format == 3)) { // uncompressed is handled
       // Attempt to move pointer where image starts
       client.readBytes(buffer, imageOffset-bytesRead); 
@@ -467,8 +467,8 @@ void button_handle(uint8_t gpio)
       }
       amplifierLow();
       #endif
-      //Extra Screen?
       
+      //Extra Screen?
       displayInit();
         if (selectedScreen != 3) {
            handleWebToDisplay(screen3, bearer3);

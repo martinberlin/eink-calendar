@@ -29,7 +29,7 @@ uint8_t eink_rotation=3;
 
 //Uncomment to disable voices
 #define ENABLE_SOUNDS
-
+//#define ENABLE_IMAGE_DEBUG
 // Audio PINs
 #define IIS_BCK 26
 #define IIS_WS  14
