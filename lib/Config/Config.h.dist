@@ -29,7 +29,7 @@ uint8_t eink_rotation=3;
 
 // Audio PINs
 #define IIS_BCK 26
-#define IIS_WS  18
+#define IIS_WS  14
 #define IIS_DOUT 25
 // Amplifier
 #define AMP_POWER_CTRL 19

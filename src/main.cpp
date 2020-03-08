@@ -92,6 +92,15 @@ GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
 
+void amplifierHigh() {
+  // Turn on the Amplifier:
+  pinMode(AMP_POWER_CTRL, OUTPUT);
+  digitalWrite(AMP_POWER_CTRL, HIGH);
+}
+void amplifierLow() {
+  digitalWrite(AMP_POWER_CTRL, LOW);
+}
+
 void displayInit() {
   display.init();
   display.setRotation(eink_rotation); // Rotates display N times clockwise
@@ -111,9 +120,6 @@ char * hostFrom(char url[]) {
   }
   return pch;
 }
-
-
-
 
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
@@ -365,6 +371,7 @@ while (client.available()) {
 
        display.update();
        Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
+       Serial.printf("Free heap: %d", ESP.getFreeHeap());
        client.stop();
        break;
        
@@ -398,8 +405,6 @@ void button_handle(uint8_t gpio)
     case BUTTON_1: {
       Serial.printf("Clicked: %d \n", BUTTON_1);
       displayInit();
-      delay(200);
-        
         if (selectedScreen != 1) {
            handleWebToDisplay(screen1, bearer1);
            selectedScreen = 1;
@@ -429,19 +434,24 @@ void button_handle(uint8_t gpio)
 #if BUTTON_3
     case BUTTON_3: {
        Serial.printf("Clicked: %d\n", BUTTON_3);
+      //Extra Screen?
+      /* displayInit();
+        if (selectedScreen != 3) {
+           handleWebToDisplay(screen3, bearer3);
+           selectedScreen = 3;
+        }  */
+
       if (!playAudio) {
+        amplifierHigh();
         Serial.println("Play audio");
         playMp3("/pno-cs.mp3");
       } else {
         mp3->stop();
+        amplifierLow();
         Serial.println("Stop audio");
       }
        playAudio = !playAudio;
-      //Extra Screen?
-        /* if (selectedScreen != 3) {
-           handleWebToDisplay(screen3, bearer3);
-           selectedScreen = 3;
-        }  */
+
     }
     break;
 #endif
@@ -482,7 +492,10 @@ void loop() {
 
   if (playAudio) {
       if (mp3->isRunning()) {
-        if (!mp3->loop()) mp3->stop();
+        if (!mp3->loop()) {
+          mp3->stop();
+          delete(mp3);
+          }
       }
   }
   
@@ -501,7 +514,10 @@ void postSetup() {
     connectTries++;
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("ONLINE: %s\n", IpAddress2String(WiFi.localIP()));
+    Serial.print("ONLINE: ");
+    Serial.println(WiFi.localIP());
+    
+    //displayInit();
     //handleWebToDisplay(screen1, bearer1);
   } else {
     Serial.println("Restarting...");ESP.restart();
@@ -511,11 +527,7 @@ void postSetup() {
 
 void setup() {
   Serial.begin(115200);
-  
-  // Turn on the Amplifier:
-  pinMode(AMP_POWER_CTRL, OUTPUT);
-  digitalWrite(AMP_POWER_CTRL, HIGH);
-
+  amplifierHigh();
   if (!SPIFFS.begin()) {
     Serial.println("FILESYSTEM is not initialized");
     Serial.println("Please use: pio run --target uploadfs");
@@ -526,7 +538,7 @@ void setup() {
   postSetup(); // WiFi and extra initialization
 
   /* playAudio = true;
-  char * mp3file = "/pno-cs.mp3";
+  char * mp3file = "/welcome.mp3";
   playMp3(mp3file); */
 
 }
