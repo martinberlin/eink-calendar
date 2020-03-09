@@ -21,7 +21,7 @@
 // pno_cs from https://ccrma.stanford.edu/~jos/pasp/Sound_Examples.html
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSPIFFS *file;
-AudioOutputI2SNoDAC *out;
+AudioOutputI2S *out;
 AudioFileSourceID3 *id3;
 bool playAudio = false;
 
@@ -386,7 +386,8 @@ void playMp3(char * mp3file) {
   file = new AudioFileSourceSPIFFS(mp3file);
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-  out = new AudioOutputI2SNoDAC();
+  //out = new AudioOutputI2SNoDAC();
+  out = new AudioOutputI2S(0,1);
   out->SetPinout(IIS_BCK, IIS_WS, IIS_DOUT);
 
   mp3 = new AudioGeneratorMP3();
