@@ -179,18 +179,23 @@ void handleWebToDisplay() {
     Serial.println(host);
     return;
   }
-  Serial.print("Path is ");
-  Serial.println(path);
-  Serial.print("Secure is ");
-  Serial.println(secure);
-
   String request;
-  request  = "GET " + String(path) + " HTTP/1.1\r\n";
+  request  = "POST " + String(path) + " HTTP/1.1\r\n";
   request += "Host: " + String(host) + "\r\n";
-  request += "Connection: close\r\n";
+  if (bearer != "") {
+    request += "Authorization: Bearer "+bearer+ "\r\n";
+  }
+
+#ifdef ENABLE_INTERNAL_IP_LOG
+  String localIp = "ip="+IpAddress2String(WiFi.localIP());
+  request += "Content-Type: application/x-www-form-urlencoded\r\n";
+  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
+  request += localIp +"\r\n";
+#endif
   request += "\r\n";
-  Serial.println(request);
-  //Serial.println(String(host)+screenPath);
+  if (debugMode) {
+    Serial.println(request);
+  }
 
   client.connect(host, 80);
   client.print(request); //send the http request to the server
