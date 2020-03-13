@@ -1,19 +1,20 @@
+![udpx Logo](/screenshot/cale-logo.svg)
+
 # CALE E-ink calendar
 
-A very easy and straight-forward Eink calendar. 
-At the moment just has 3 simple options:
+A very easy and straight-forward E-Ink calendar. 
 
-1. Renders a screenshot of a webpage. A calendar if you point it to a page rendering it's contents.
-2. Renders a free title + text
-3. Cleans screen
+The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
-If you have an OS with Bonjour enabled multicast DNS discovery OS like mac or linux it should be possible to access also browsing: calendar.local
+Now what remains here in master is the version that will just do two things only:
+
+1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
+2. Will go to sleep the amount of seconds defined in Config and return to point 1
 
 ### Our approach to make an easy E-Ink calendar
 
-- A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink
+- A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
 - The Firmware driving the Eink display will wake up every morning or every 2 hours and read this screenshot. Then it will stay in deep sleep mode, consuming 1 miliamper from the battery, until it wakes up again and repeats the loop. 
-- [CALE.es](https://cale.es) will prepare for you a bitmap url so you can simply copy and paste it in Config.h configuration file
 
 ### Simple configuration
 
@@ -51,6 +52,14 @@ And passed to cale.es that verifies that your user owns this screen and also tha
 
 ![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
 
+[Check more information and detailed schematics](https://cale.es/firmware)
+
+### Hardware requirements
+
+To build one of this you can start easy and get something that needs no soldiering at all and comes already wired in a single PCB with an ESP32 included. If you want to start easy like this our recommendation is to get a [Lilygo T5](https://cale.es/firmware-t5).
+Now if you want to have a big Epaper like 800x480 then you need to wire it yourself. Please browser our supported [displays for CALE](https://cale.es/eink-displays)
+
+
 #### ESP32 wiring suggestion
 
 Mapping suggestion for ESP32, e.g. LOLIN32:
@@ -66,5 +75,5 @@ Mapping suggestion for ESP32, e.g. LOLIN32:
 
 ### Support CALE
 
-There are commercial solutions alike and they start up to 500€ for a Eink syncronized calendar (Check getjoan.com)
+There are commercial solutions alike and they start up to 560€ for a Eink syncronized calendar (Check getjoan.com)
 If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end. 
