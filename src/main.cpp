@@ -394,6 +394,15 @@ void playMp3(char * mp3file) {
   mp3->begin(id3, out);
 }
 
+void espressifSleep() {
+  // If you want to use a button for "deepsleep" this may be a great place: 
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
+        esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
+        Serial.println(" Going to sleep now, press first Button or Reset to wake up!");
+        delay(1000);
+        esp_deep_sleep_start(); 
+}
+
 void button_handle(uint8_t gpio)
 {
     switch (gpio) {
@@ -418,12 +427,8 @@ void button_handle(uint8_t gpio)
            handleWebToDisplay(screen1, bearer1);
            selectedScreen = 1;
         }
-    // If you want to use a button for "deepsleep" this may be a great place: 
-        /* esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_1, LOW);
-        esp_sleep_enable_ext1_wakeup(((uint64_t)(((uint64_t)1) << BUTTON_1)), ESP_EXT1_WAKEUP_ALL_LOW);
-        Serial.println("Going to sleep now");
-        delay(2000);
-        esp_deep_sleep_start(); */
+        // Just uncomment this espressifSleep() if you want the T5 to be awake all the time (But be aware it takes about 35mA/hour)
+        espressifSleep();
     }
     break;
 #endif
@@ -449,6 +454,7 @@ void button_handle(uint8_t gpio)
            handleWebToDisplay(screen2, bearer2);
            selectedScreen = 2;
         }
+        espressifSleep();
     }
     break;
 #endif
