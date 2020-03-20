@@ -15,28 +15,45 @@ String bearer3 = "";
 
 // Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
 #define ENABLE_INTERNAL_IP_LOG
-// Buttons
+// TTGO T5 buttons
 #define BUTTON_1 38
 #define BUTTON_2 37
 #define BUTTON_3 39
-#define BUTTONS_MAP \
-    {               \
-        38, 37, 39  \
+
+/* TTGO T5S buttons */
+//#define BUTTON_1 37
+//#define BUTTON_2 38
+//#define BUTTON_3 39
+
+#define BUTTONS_MAP                   \
+    {                                 \
+        BUTTON_1, BUTTON_2, BUTTON_3  \
     }
 
 #define GDEH0213B73
 uint8_t eink_rotation=3;
 
-//Uncomment to disable voices
+// Uncomment to disable voices
 #define ENABLE_SOUNDS
+/* TTGO T5S has built-in MAX98357A */
+//#define ENABLE_EXT_I2S
+
 //#define ENABLE_IMAGE_DEBUG
-// Audio PINs
+
+// TTGO T5 audio PINs
 #define IIS_BCK 26
 #define IIS_WS  14
 #define IIS_DOUT 25
-// Amplifier
+
+/* TTGO T5S audio PINs */
+//#define IIS_BCK  26
+//#define IIS_WS   25
+//#define IIS_DOUT 19
+
+// Uncomment to disable amplifier
 #define AMP_POWER_CTRL 19
 
+//#define GDEW027W3    /* TTGO T5S 2.7" b/w */
 //#define GDE0213B1    // 2.13" b/w
 //#define GDEH0213B72  // 2.13" b/w new panel
 //#define GDEH0213B73  // 2.13" b/w newer panel TTGO T5 -->Tester

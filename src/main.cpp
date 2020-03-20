@@ -10,6 +10,7 @@
   #include "AudioFileSourceID3.h"
   #include "AudioGeneratorMP3.h"
   #include "AudioOutputI2SNoDAC.h"
+  #include "AudioOutputI2S.h"
 #endif
 #include <WiFiClient.h>
 #include <SPI.h>
@@ -78,6 +79,8 @@ uint8_t g_btns[] = BUTTONS_MAP;
   #include <GxGDEW029T5/GxGDEW029T5.h>
   #elif defined(GDEW029Z10)
   #include <GxGDEW029Z10/GxGDEW029Z10.h>
+  #elif defined(GDEW027W3)
+  #include <GxGDEW027W3/GxGDEW027W3.h>
 #endif
 
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
@@ -100,12 +103,16 @@ GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 WiFiClient client; // wifi client object
 
 void amplifierHigh() {
+#if defined(AMP_POWER_CTRL)
   // Turn on the Amplifier:
   pinMode(AMP_POWER_CTRL, OUTPUT);
   digitalWrite(AMP_POWER_CTRL, HIGH);
+#endif
 }
 void amplifierLow() {
+#if defined(AMP_POWER_CTRL)
   digitalWrite(AMP_POWER_CTRL, LOW);
+#endif
 }
 
 void displayInit() {
@@ -381,13 +388,19 @@ while (client.available()) {
 }
 
 void playMp3(char * mp3file) {
+
+  int output_mode = AudioOutputI2S::INTERNAL_DAC;
+#if defined(ENABLE_EXT_I2S)
+  output_mode = AudioOutputI2S::EXTERNAL_I2S;
+#endif
+
   amplifierHigh();
   audioLogger = &Serial;
   file = new AudioFileSourceSPIFFS(mp3file);
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
   //out = new AudioOutputI2SNoDAC();
-  out = new AudioOutputI2S(0,1);
+  out = new AudioOutputI2S(0, output_mode);
   out->SetPinout(IIS_BCK, IIS_WS, IIS_DOUT);
 
   mp3 = new AudioGeneratorMP3();
