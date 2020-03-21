@@ -1,0 +1,2 @@
+# Reclassify .php files since are just an example but not the firmware:
+*.php linguist-language=C++
