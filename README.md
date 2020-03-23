@@ -38,7 +38,9 @@ Please check http://cale.es for the up-to-date Schematic. The T5 is already all 
 
 ### Build logs and detailed instructions
 
-![CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+
+![CALE T5](https://cdn.hackaday.io/images/7233061583733584070.jpeg)
 
 ### Support CALE
 
