@@ -208,27 +208,55 @@ uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
 uint8_t mono_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 b/w
 uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 c/w
 
-void drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char* filename, int16_t x, int16_t y, bool with_color)
+void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
+  int millisIni = millis();
+  int millisEnd = 0;
   bool connection_ok = false;
   bool valid = false; // valid format to be handled
   bool flip = true; // bitmap is stored bottom-to-top
   uint32_t startTime = millis();
-  if ((x >= display.width()) || (y >= display.height())) return;
-  display.fillScreen(GxEPD_WHITE);
+  
+    char *path;
+  char host[100];
+  bool secure = true; // Default to secure
+  unsigned hostlen = sizeof(host);
+  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
+    Serial.println("Parsing error!");
+    Serial.println(host);
+    return;
+  }
+  String request;
+  request  = "POST " + String(path) + " HTTP/1.1\r\n";
+  request += "Host: " + String(host) + "\r\n";
+  if (bearer != "") {
+    request += "Authorization: Bearer "+bearer+ "\r\n";
+  }
+
+#ifdef ENABLE_INTERNAL_IP_LOG
+  String localIp = "ip="+IpAddress2String(WiFi.localIP());
+  request += "Content-Type: application/x-www-form-urlencoded\r\n";
+  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
+  request += localIp +"\r\n";
+#endif
+  request += "\r\n";
+  if (debugMode) {
+    Serial.println(request);
+  }
+
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
     Serial.println("connection failed");
     return;
   }
-  Serial.print("requesting URL: ");
-  Serial.println(String("http://") + host + path + filename);
-  client.print(String("GET ") + path + filename + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" +
-               "User-Agent: GxEPD_WiFi_Example\r\n" +
-               "Connection: close\r\n\r\n");
-  Serial.println("request sent");
+  Serial.print("Requesting URL: ");
+  Serial.println(String(host) + String(path));
+  client.connect(host, 80);
+  client.print(request); //send the http request to the server
+  client.flush();
+  display.fillScreen(GxEPD_WHITE);
+
   while (client.connected())
   {
     String line = client.readStringUntil('\n');
@@ -250,6 +278,7 @@ void drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char
   // Parse BMP header
   if (read16(client) == 0x4D42) // BMP signature
   {
+    int millisBmp = millis();
     uint32_t fileSize = read32(client);
     uint32_t creatorBytes = read32(client);
     uint32_t imageOffset = read32(client); // Start of image data
@@ -280,8 +309,8 @@ void drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char
       }
       uint16_t w = width;
       uint16_t h = height;
-      if ((x + w - 1) >= display.width())  w = display.width()  - x;
-      if ((y + h - 1) >= display.height()) h = display.height() - y;
+      if ((w - 1) >= display.width())  w = display.width();
+      if ((h - 1) >= display.height()) h = display.height();
       valid = true;
       uint8_t bitmask = 0xFF;
       uint8_t bitshift = 8 - depth;
@@ -306,6 +335,7 @@ void drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char
           mono_palette_buffer[pn / 8] |= whitish << pn % 8;
           if (0 == pn % 8) color_palette_buffer[pn / 8] = 0;
           color_palette_buffer[pn / 8] |= colored << pn % 8;
+          // DEBUG Colors
           //Serial.print("0x00"); Serial.print(red, HEX); Serial.print(green, HEX); Serial.print(blue, HEX);
           //Serial.print(" : "); Serial.print(whitish); Serial.print(", "); Serial.println(colored);
         }
@@ -407,72 +437,27 @@ void drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char
           {
             color = GxEPD_BLACK;
           }
-          uint16_t yrow = y + (flip ? h - row - 1 : row);
-          display.drawPixel(x + col, yrow, color);
+          uint16_t yrow = (flip ? h - row - 1 : row);
+          display.drawPixel(col, yrow, color);
         } // end pixel
       } // end line
     }
-    Serial.print("bytes read "); Serial.println(bytes_read);
+
+    millisEnd = millis();
+    Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
+    bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
   }
+  millisEnd = millis();
   display.update();
-  Serial.print("loaded in "); Serial.print(millis() - startTime); Serial.println(" ms");
+  Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
   if (!valid)
   {
-    Serial.println("bitmap format not handled.");
+      display.setCursor(5, 20);
+      display.print("Unsupported image format");
+      display.setCursor(5, 40);
+      display.print("Compressed bmp are not handled");
   }
-}
-
-/**
- * @deprecated Will use gxEPD library
- */ 
-void handleWebToDisplay() {
-  return;
-  int millisIni = millis();
-  char *path;
-  char host[100];
-  bool secure = true; // Default to secure
-  unsigned hostlen = sizeof(host);
-  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
-    Serial.println("Parsing error!");
-    Serial.println(host);
-    return;
-  }
-  String request;
-  request  = "POST " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(host) + "\r\n";
-  if (bearer != "") {
-    request += "Authorization: Bearer "+bearer+ "\r\n";
-  }
-
-#ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+IpAddress2String(WiFi.localIP());
-  request += "Content-Type: application/x-www-form-urlencoded\r\n";
-  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
-  request += localIp +"\r\n";
-#endif
-  request += "\r\n";
-  if (debugMode) {
-    Serial.println(request);
-  }
-
-  client.connect(host, 80);
-  client.print(request); //send the http request to the server
-  client.flush();
-  display.fillScreen(GxEPD_WHITE);
- 
-      int millisEnd = millis();
-
-      //Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",bytes_Read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
-
-       display.update();
-       Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
-       client.stop();
-
-// IF is compressed then:
-      display.setCursor(10, 43);
-      //display.print("Compressed BMP files are not handled. Unsupported image format (depth:"+String(depth)+")");
-      display.update();
-         
+  display.update();
 }
 
 void loop() {
@@ -517,8 +502,8 @@ void setup() {
     Serial.println("ONLINE");
     Serial.println(WiFi.localIP());
     
-   // drawBitmapFrom_HTTP_ToBuffer(const char* host, const char* path, const char* filename, int16_t x, int16_t y, bool with_color)
-    drawBitmapFrom_HTTP_ToBuffer("img.cale.es","/bmp/fasani/5e793990af85d", "",0,0,false);
+   //New function that reads the URL from config:
+   drawBitmapFrom_HTTP_ToBuffer(false);
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.

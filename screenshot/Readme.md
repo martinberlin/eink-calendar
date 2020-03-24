@@ -1,57 +1,89 @@
-## Server backend example 
+![udpx Logo](/screenshot/cale-logo.svg)
 
-This server backend is an example of how to achieve the only <b>one thing that the Firmware needs</b>:
+# CALE E-ink calendar
 
-A BMP image of 1 or 4 bits depth. Try first with 1 bit depth image and if for some reason does not work it can also receive a 4 bits BMP response.
-We found out that for smaller displays our Firmware code to read 1 bit depth is not working like expected in small displays, in that case, just return a 4-bit image. 
+## A very easy and straight-forward E-Ink calendar
 
-We used PHP as a server side language but it could be achieved with any language. The only thing that matters is that the response matches the expectations and the width/height size of your Eink display:
+The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
-1. Response Content-Type:image/bmp
-2. Image: Width / height in pixels should be equal to your display
+**Now what remains here in master is the version that will just do two things only:**
 
-So it does not matter if you do this in ASP, Coldfusion, Perl or whatever language you choose. The Firmware does not care as long as you deliver the expected response with a bmp image.
+1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
+2. Will go to sleep the amount of seconds defined in Config and return to point 1
 
-## Library dependencies
+### Our approach to make an easy E-Ink calendar
 
-To install the library dependencies we are using [Composer](https://getcomposer.org) just go in the command line to this directory and run:
+- A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
+- The Firmware driving the Eink display will wake up every morning or every 2 hours and read this screenshot. Then it will stay in deep sleep mode, consuming 1 miliamper from the battery, until it wakes up again and repeats the loop. 
 
-    composer install
+The goal is to build a dynamic calendar that is easy to install and has the lowest consumption as possible.
 
-The index.php script generates a website screenshot of a given URL.
-Make sure that the index.php Line:
+### Simple configuration
 
-    require './vendor/autoload.php';
+Just rename lib/Config/Config.h.dist to Config.h
+and fill it with your WiFi name and password.
 
-Matches the **vendor** Folder location. 
-Note that to simplify this examples, both the g_calendar and the screenshot tool are sharing the same vendor folders. Just split them if you need to have them separately. They do not need to work in the same server and they are conceived as small "microservices" that can run independently of each other.
+If you want to enable deepsleep to power your calendar with batteries, then uncomment the line:
 
+    //#define DEEPSLEEP_ENABLED
 
-## Expand it to match your Eink size
+Amount of seconds that the ESP32 is awake:
 
-In the PHP we are receiving the **u** variable for the url that should be rendered and we added also a **eink** to represent the model:
+    #define SLEEP_AFTER_SECONDS 20 
 
-    switch($eink_model) {
-      case 'GxGDEW027C44':
-       $displayWidth = 264;
-       $displayHeight = 176;
-       $zoomFactor = isset($_GET['z']) ? $_GET['z'] : '.6';
-      break;
-    }
+Note that ESP8266 uses another function to deepsleep and has a maximun deepsleep time of about 3 hours:
 
-This will return for a 2.7 " eink a 264x176 image if you pass the eink as a get parameter:
+    ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
 
-mywebsite.com/screenshot/index.php?u=https://www.google.com&eink=GxGDEW027C44
+**Most important part of the configuration:**
 
-You can add your model to the case using this example and customize the width/height and zoom factor to get the desired output.
-As default when no **eink** parameter comes returns a 640*384 image. 
-Feel free to expand this and your Eink display size. We prefer not to do it ourselves since we don't have all the models to test the output.
+    char screenUrl[] = "http://img.cale.es/bmp/USERNAME/SCREEN_ID";
+    
+    // Security setting, leave empty if your screen is publis
+    String bearer = "";
 
-## Compression test
+Note that we don't recommend to use public screens since your calendar may contain private information like events, transfer or doctor appointments that you should not open to the world to see. So use always a security token.
 
-compress.php has a version that was prepared to compress the BMP image using Zlib. Is only though to be used in the ESP32 since the ESP8266 (At least the Wemos D1 has too little memory for decompression)
-In the ESP8266 I could only decompress 4 Kb maximum. So this compress php example is just left there as a "proof of concept" on how to do compression in the backend side.
+This token is sent in the headers like:
 
-## Google calendar example
+Authorization: Bearer YOUR_TOKEN
 
-An example to render a dynamic google calendar is on the **g_calendar** directory along with instructions. 
+And passed to cale.es that verifies that your user owns this screen and also that the token matches the one that is stored on our servers.
+
+### Schematics
+
+![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
+
+[Check more information and detailed schematics for the ESP32](https://cale.es/firmware)
+
+### Hardware requirements
+
+To build one of this you can start easy and get something that needs no soldiering at all and comes already wired in a single PCB with an ESP32 included. If you want to start easy like this our recommendation is to get a [Lilygo T5](https://cale.es/firmware-t5).
+Now if you want to have a big Epaper like 800x480 then you need to wire it yourself. Please browser our supported [displays for CALE](https://cale.es/eink-displays)
+
+The most important asset to achieve low consumption and long battery life is that the ESP32 you use consumes less than 1 mA/hour in deepsleep mode.
+
+#### ESP32 wiring suggestion
+
+Mapping suggestion for ESP32, e.g. LOLIN32:
+
+    This pins defined in lib/Config/Config.h
+    BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)  
+
+    This ones are fixed
+    CLK -> SCK(18), DIN -> MOSI(23)
+
+### Build logs and detailed instructions
+
+[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+
+### Support CALE
+
+There are commercial solutions alike and they start up to 560€ for a Eink syncronized calendar (Check getjoan.com)
+If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end. 
+
+### Credits
+
+ZinggJM - Our function to read binary BMP is based on the [gxEPD WiFi example](https://github.com/ZinggJM/GxEPD/tree/master/examples/GxEPD_WiFi_Example) (90% from the code is his)
+
+The great scheme, host and path function parsePathInformation() was coded by [Samuel Archibald](https://github.com/iotpanic).
