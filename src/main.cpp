@@ -18,6 +18,8 @@
   #include <GxGDEW075T8/GxGDEW075T8.h>
   #elif defined(GDEW075T7)
   #include <GxGDEW075T7/GxGDEW075T7.h> 
+  #elif defined(GDEP015OC1)
+  #include <GxGDEP015OC1/GxGDEP015OC1.h>
   #elif defined(GDEW0213I5F)
   #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
   #elif defined(GDE0213B1)
@@ -60,7 +62,7 @@
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
-bool debugMode = false;
+bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
@@ -88,17 +90,63 @@ void displayClean() {
   display.update();
 }
 
-uint16_t read16()
+uint32_t skip(WiFiClient& client, int32_t bytes)
+{
+  int32_t remain = bytes;
+  uint32_t start = millis();
+  while ((client.connected() || client.available()) && (remain > 0))
+  {
+    if (client.available())
+    {
+      int16_t v = client.read();
+      remain--;
+    }
+    else delay(1);
+    if (millis() - start > 2000) break; // don't hang forever
+  }
+  return bytes - remain;
+}
+
+uint32_t read(WiFiClient& client, uint8_t* buffer, int32_t bytes)
+{
+  int32_t remain = bytes;
+  uint32_t start = millis();
+  while ((client.connected() || client.available()) && (remain > 0))
+  {
+    if (client.available())
+    {
+      int16_t v = client.read();
+      *buffer++ = uint8_t(v);
+      remain--;
+    }
+    else delay(1);
+    if (millis() - start > 2000) break; // don't hang forever
+  }
+  return bytes - remain;
+}
+
+uint16_t read16bmp(WiFiClient& client)
 {
   // BMP data is stored little-endian, same as Arduino.
   uint16_t result;
   ((uint8_t *)&result)[0] = client.read(); // LSB
   ((uint8_t *)&result)[1] = client.read(); // MSB
-  //Serial.print(result, HEX);
+  if (debugMode) {
+    Serial.print(result,HEX); Serial.print(" ");
+  } 
   return result;
 }
 
-uint32_t read32()
+uint16_t read16(WiFiClient& client)
+{
+  // BMP data is stored little-endian, same as Arduino.
+  uint16_t result;
+  ((uint8_t *)&result)[0] = client.read(); // LSB
+  ((uint8_t *)&result)[1] = client.read(); // MSB
+  return result;
+}
+
+uint32_t read32(WiFiClient& client)
 {
   // BMP data is stored little-endian, same as Arduino.
   uint32_t result;
@@ -166,11 +214,24 @@ String IpAddress2String(const IPAddress& ipAddress)
   String(ipAddress[2]) + String(".") +\
   String(ipAddress[3]);
 }
+// Copied verbatim from gxEPD example (See platformio.ini)
+static const uint16_t input_buffer_pixels = 640; // may affect performance
+static const uint16_t max_palette_pixels = 256; // for depth <= 8
 
+uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
+uint8_t mono_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 b/w
+uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 c/w
 
-void handleWebToDisplay() {
+void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
+{
   int millisIni = millis();
-  char *path;
+  int millisEnd = 0;
+  bool connection_ok = false;
+  bool valid = false; // valid format to be handled
+  bool flip = true; // bitmap is stored bottom-to-top
+  uint32_t startTime = millis();
+  
+    char *path;
   char host[100];
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
@@ -197,141 +258,225 @@ void handleWebToDisplay() {
     Serial.println(request);
   }
 
+  Serial.print("connecting to "); Serial.println(host);
+  if (!client.connect(host, 80))
+  {
+    Serial.println("connection failed");
+    return;
+  }
+  Serial.print("Requesting URL: ");
+  Serial.println(String(host) + String(path));
   client.connect(host, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
-  
-  unsigned long timeout = millis();
-  while (client.available() == 0) {
-    if (millis() - timeout > 5000) {
-      Serial.println(">>> Client Timeout !");
-      client.stop();
-      return;
-    }
-  }
-  
-  int displayWidth = display.width();
-  int displayHeight= display.height();// Not used now
-  uint8_t buffer[displayWidth]; // pixel buffer, size for r,g,b
-  long bytesRead = 34; // summing the whole BMP info headers
-  long count = 0;
-  uint8_t lastByte = 0x00;
 
-// Start reading bits
-while (client.available()) {
-  count++;
-  uint8_t clientByte = client.read();
-  uint16_t bmp;
-  ((uint8_t *)&bmp)[0] = lastByte; // LSB
-  ((uint8_t *)&bmp)[1] = clientByte; // MSB
-  if (debugMode) {
-    Serial.print(bmp,HEX);Serial.print(" ");
-    if (0 == count % 16) {
-      Serial.println();
+  while (client.connected())
+  {
+    String line = client.readStringUntil('\n');
+    if (!connection_ok)
+    {
+      connection_ok = line.startsWith("HTTP/1.1 200 OK");
+      if (connection_ok) Serial.println(line);
     }
-    delay(1);
+    if (line == "\r")
+    {
+      Serial.println("headers received");
+      break;
+    }
   }
-  lastByte = clientByte;
-  
-  if (bmp == 0x4D42) { // BMP signature
+  if (!connection_ok) {
+    Serial.print("Client disconnected"); 
+    return;
+  }
+  // Parse BMP header
+  Serial.print("Searching for 0x4D42 start of BMP\n\n");
+  while (true) {
+  if (read16bmp(client) == 0x4D42) // BMP signature
+  {
     int millisBmp = millis();
-    uint32_t fileSize = read32();
-    read32(); // creatorBytes
-    uint32_t imageOffset = read32(); // Start of image data
-    uint32_t headerSize = read32();
-    uint32_t width  = read32();
-    uint32_t height = read32();
-    uint16_t planes = read16();
-    uint16_t depth = read16(); // bits per pixel
-    uint32_t format = read32();
+    uint32_t fileSize = read32(client);
+    uint32_t creatorBytes = read32(client);
+    uint32_t imageOffset = read32(client); // Start of image data
+    uint32_t headerSize = read32(client);
+    uint32_t width  = read32(client);
+    uint32_t height = read32(client);
+    uint16_t planes = read16(client);
+    uint16_t depth = read16(client); // bits per pixel
+    uint32_t format = read32(client);
+    uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
+    Serial.printf("\n\nFile size: %d\n",fileSize); 
+    Serial.print("Image Offset: "); Serial.println(imageOffset);
+    Serial.print("Header size: "); Serial.println(headerSize);
+    Serial.print("Bit Depth: "); Serial.println(depth);
+    Serial.printf("Resolution: %d x %d\n",width,height);
     
-      Serial.print("->BMP starts here. File size: "); Serial.println(fileSize);
-      Serial.print("Image Offset: "); Serial.println(imageOffset);
-      Serial.print("Header size: "); Serial.println(headerSize);
-      Serial.print("Width * Height: "); Serial.print(String(width) + " x " + String(height));
-      Serial.print(" / Bit Depth: "); Serial.println(depth);
-      Serial.print("Planes: "); Serial.println(planes);Serial.print("Format: "); Serial.println(format);
-    
-    if ((planes == 1) && (format == 0 || format == 3)) { // uncompressed is handled
-      // Attempt to move pointer where image starts
-      client.readBytes(buffer, imageOffset-bytesRead); 
-      size_t buffidx = sizeof(buffer); // force buffer load
-      
-      for (uint16_t row = 0; row < height; row++) // for each line
+    if ((planes == 1) && ((format == 0) || (format == 3))) // uncompressed is handled, 565 also
+    {
+      valid = true;
+      // BMP rows are padded (if needed) to 4-byte boundary
+      uint32_t rowSize = (width * depth / 8 + 3) & ~3;
+      if (depth < 8) rowSize = ((width * depth + 8 - depth) / 8 + 3) & ~3;
+      if (height < 0)
       {
-        //delay(1); // May help to avoid Wdt reset
-        uint8_t bits = 0;
-        for (uint16_t col = 0; col < width; col++) // for each pixel
+        height = -height;
+        flip = false;
+      }
+      uint16_t w = width;
+      uint16_t h = height;
+      if ((w - 1) >= display.width())  w = display.width();
+      if ((h - 1) >= display.height()) h = display.height();
+      
+      uint8_t bitmask = 0xFF;
+      uint8_t bitshift = 8 - depth;
+      uint16_t red, green, blue;
+      bool whitish, colored;
+      if (depth == 1) with_color = false;
+      if (depth <= 8)
+      {
+        if (depth < 8) bitmask >>= depth;
+        //bytes_read += skip(client, 54 - bytes_read); //palette is always @ 54
+        bytes_read += skip(client, imageOffset - (4 << depth) - bytes_read); // 54 for regular, diff for colorsimportant
+        for (uint16_t pn = 0; pn < (1 << depth); pn++)
+        {
+          blue  = client.read();
+          green = client.read();
+          red   = client.read();
+          client.read();
+          bytes_read += 4;
+          whitish = with_color ? ((red > 0x80) && (green > 0x80) && (blue > 0x80)) : ((red + green + blue) > 3 * 0x80); // whitish
+          colored = (red > 0xF0) || ((green > 0xF0) && (blue > 0xF0)); // reddish or yellowish?
+          if (0 == pn % 8) mono_palette_buffer[pn / 8] = 0;
+          mono_palette_buffer[pn / 8] |= whitish << pn % 8;
+          if (0 == pn % 8) color_palette_buffer[pn / 8] = 0;
+          color_palette_buffer[pn / 8] |= colored << pn % 8;
+          // DEBUG Colors
+          //Serial.print("0x00"); Serial.print(red, HEX); Serial.print(green, HEX); Serial.print(blue, HEX);
+          //Serial.print(" : "); Serial.print(whitish); Serial.print(", "); Serial.println(colored);
+        }
+      }
+      display.fillScreen(GxEPD_WHITE);
+      uint32_t rowPosition = flip ? imageOffset + (height - h) * rowSize : imageOffset;
+      //Serial.print("skip "); Serial.println(rowPosition - bytes_read);
+      bytes_read += skip(client, rowPosition - bytes_read);
+      for (uint16_t row = 0; row < h; row++, rowPosition += rowSize) // for each line
+      {
+        if (!connection_ok || !(client.connected() || client.available())) break;
+        delay(1); // yield() to avoid WDT
+        uint32_t in_remain = rowSize;
+        uint32_t in_idx = 0;
+        uint32_t in_bytes = 0;
+        uint8_t in_byte = 0; // for depth <= 8
+        uint8_t in_bits = 0; // for depth <= 8
+        uint16_t color = GxEPD_WHITE;
+        for (uint16_t col = 0; col < w; col++) // for each pixel
         {
           yield();
+          if (!connection_ok || !(client.connected() || client.available())) break;
           // Time to read more pixel data?
-          if (buffidx >= sizeof(buffer))
+          if (in_idx >= in_bytes) // ok, exact match for 24bit also (size IS multiple of 3)
           {
-            client.readBytes(buffer, sizeof(buffer));
-            buffidx = 0; // Set index to beginning
-            //Serial.printf("ReadBuffer Row: %d bytesRead: %d\n",row,bytesRead);
+            uint32_t get = in_remain > sizeof(input_buffer) ? sizeof(input_buffer) : in_remain;
+            uint32_t got = read(client, input_buffer, get);
+            while ((got < get) && connection_ok)
+            {
+              //Serial.print("got "); Serial.print(got); Serial.print(" < "); Serial.print(get); Serial.print(" @ "); Serial.println(bytes_read);
+              uint32_t gotmore = read(client, input_buffer + got, get - got);
+              got += gotmore;
+              connection_ok = gotmore > 0;
+            }
+            in_bytes = got;
+            in_remain -= got;
+            bytes_read += got;
+          }
+          if (!connection_ok)
+          {
+            Serial.print("Error: got no more after "); Serial.print(bytes_read); Serial.println(" bytes read!");
+            break;
           }
           switch (depth)
           {
-            case 1: // one bit per pixel b/w format
+            case 24:
+              blue = input_buffer[in_idx++];
+              green = input_buffer[in_idx++];
+              red = input_buffer[in_idx++];
+              whitish = with_color ? ((red > 0x80) && (green > 0x80) && (blue > 0x80)) : ((red + green + blue) > 3 * 0x80); // whitish
+              colored = (red > 0xF0) || ((green > 0xF0) && (blue > 0xF0)); // reddish or yellowish?
+              break;
+            case 16:
               {
-                if (0 == col % 8)
+                uint8_t lsb = input_buffer[in_idx++];
+                uint8_t msb = input_buffer[in_idx++];
+                if (format == 0) // 555
                 {
-                  bits = buffer[buffidx++];
-                  bytesRead++;
+                  blue  = (lsb & 0x1F) << 3;
+                  green = ((msb & 0x03) << 6) | ((lsb & 0xE0) >> 2);
+                  red   = (msb & 0x7C) << 1;
                 }
-                uint16_t bw_color = bits & 0x80 ? GxEPD_WHITE : GxEPD_BLACK;
-                display.drawPixel(col, displayHeight-row, bw_color);
-                bits <<= 1;
+                else // 565
+                {
+                  blue  = (lsb & 0x1F) << 3;
+                  green = ((msb & 0x07) << 5) | ((lsb & 0xE0) >> 3);
+                  red   = (msb & 0xF8);
+                }
+                whitish = with_color ? ((red > 0x80) && (green > 0x80) && (blue > 0x80)) : ((red + green + blue) > 3 * 0x80); // whitish
+                colored = (red > 0xF0) || ((green > 0xF0) && (blue > 0xF0)); // reddish or yellowish?
               }
               break;
-              
-            case 4: // was a hard work to get here
+            case 1:
+            case 4:
+            case 8:
               {
-                if (0 == col % 2) {
-                  bits = buffer[buffidx++];
-                  bytesRead++;
-                }   
-                bits <<= 1;           
-                bits <<= 1;
-                uint16_t bw_color = bits > 0x80 ? GxEPD_WHITE : GxEPD_BLACK;
-                display.drawPixel(col, displayHeight-row, bw_color);
-                bits <<= 1;
-                bits <<= 1;
+                if (0 == in_bits)
+                {
+                  in_byte = input_buffer[in_idx++];
+                  in_bits = 8;
+                }
+                uint16_t pn = (in_byte >> bitshift) & bitmask;
+                whitish = mono_palette_buffer[pn / 8] & (0x1 << pn % 8);
+                colored = color_palette_buffer[pn / 8] & (0x1 << pn % 8);
+                in_byte <<= depth;
+                in_bits -= depth;
               }
               break;
-              
-             case 24: // standard BMP format
-              {
-                uint16_t b = buffer[buffidx++];
-                uint16_t g = buffer[buffidx++];
-                uint16_t r = buffer[buffidx++];
-                uint16_t bw_color = ((r + g + b) / 3 > 0xFF  / 2) ? GxEPD_WHITE : GxEPD_BLACK;
-                display.drawPixel(col, displayHeight-row, bw_color);
-                bytesRead = bytesRead +3;
-              }
           }
+          if (whitish)
+          {
+            color = GxEPD_WHITE;
+          }
+          else if (colored && with_color)
+          {
+            color = GxEPD_RED;
+          }
+          else
+          {
+            color = GxEPD_BLACK;
+          }
+          uint16_t yrow = (flip ? h - row - 1 : row);
+          display.drawPixel(col, yrow, color);
         } // end pixel
       } // end line
-      int millisEnd = millis();
-
-      Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",bytesRead,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
-
-       display.update();
-       Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
-       client.stop();
-       break;
-       
     } else {
-      display.setCursor(10, 43);
-      display.print("Compressed BMP files are not handled. Unsupported image format (depth:"+String(depth)+")");
-      display.update();
-      
+      Serial.println("BMP not supported");
+    }
+
+    millisEnd = millis();
+    Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
+    bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+    break;
     }
   }
+  millisEnd = millis();
   
-  }     
+  if (!valid)
+  {
+      display.setCursor(5, 20);
+      display.print("Unsupported image format");
+      display.setCursor(5, 40);
+      display.print("Compressed bmp are not handled");
+  } 
+  display.update();
+  Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
 }
 
 void loop() {
@@ -375,8 +520,9 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("ONLINE");
     Serial.println(WiFi.localIP());
-    delay(999);
-    handleWebToDisplay();
+    
+   //New function that reads the URL from config:
+   drawBitmapFrom_HTTP_ToBuffer(false);
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
