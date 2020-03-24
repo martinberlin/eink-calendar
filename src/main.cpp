@@ -264,18 +264,16 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     {
       connection_ok = line.startsWith("HTTP/1.1 200 OK");
       if (connection_ok) Serial.println(line);
-      //if (!connection_ok) Serial.println(line);
     }
-    if (!connection_ok) Serial.println(line);
-    //Serial.println(line);
     if (line == "\r")
     {
       Serial.println("headers received");
       break;
     }
   }
-  if (!connection_ok) return;
+  //if (!connection_ok) return;
   // Parse BMP header
+  Serial.println("Searching for 0x4D42 start of BMP");
   if (read16(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
@@ -289,16 +287,15 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     uint16_t depth = read16(client); // bits per pixel
     uint32_t format = read32(client);
     uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
+    Serial.print("File size: "); Serial.println(fileSize);
+    Serial.print("Image Offset: "); Serial.println(imageOffset);
+    Serial.print("Header size: "); Serial.println(headerSize);
+    Serial.print("Bit Depth: "); Serial.println(depth);
+    Serial.printf("Resolution: %d x %d\n",width,height);
+    
     if ((planes == 1) && ((format == 0) || (format == 3))) // uncompressed is handled, 565 also
     {
-      Serial.print("File size: "); Serial.println(fileSize);
-      Serial.print("Image Offset: "); Serial.println(imageOffset);
-      Serial.print("Header size: "); Serial.println(headerSize);
-      Serial.print("Bit Depth: "); Serial.println(depth);
-      Serial.print("Image size: ");
-      Serial.print(width);
-      Serial.print('x');
-      Serial.println(height);
+      valid = true;
       // BMP rows are padded (if needed) to 4-byte boundary
       uint32_t rowSize = (width * depth / 8 + 3) & ~3;
       if (depth < 8) rowSize = ((width * depth + 8 - depth) / 8 + 3) & ~3;
@@ -311,7 +308,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
       uint16_t h = height;
       if ((w - 1) >= display.width())  w = display.width();
       if ((h - 1) >= display.height()) h = display.height();
-      valid = true;
+      
       uint8_t bitmask = 0xFF;
       uint8_t bitshift = 8 - depth;
       uint16_t red, green, blue;
@@ -448,16 +445,16 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
   }
   millisEnd = millis();
-  display.update();
-  Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
+  
   if (!valid)
   {
       display.setCursor(5, 20);
       display.print("Unsupported image format");
       display.setCursor(5, 40);
       display.print("Compressed bmp are not handled");
-  }
+  } 
   display.update();
+  Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
 }
 
 void loop() {

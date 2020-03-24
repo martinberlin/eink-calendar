@@ -62,7 +62,7 @@ Mapping suggestion for ESP32, e.g. LOLIN32:
 
 ### Build logs and detailed instructions
 
-![CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
 
 ### Support CALE
 
