@@ -60,7 +60,7 @@
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
-bool debugMode = false;
+bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
@@ -121,6 +121,18 @@ uint32_t read(WiFiClient& client, uint8_t* buffer, int32_t bytes)
     if (millis() - start > 2000) break; // don't hang forever
   }
   return bytes - remain;
+}
+
+uint16_t read16bmp(WiFiClient& client)
+{
+  // BMP data is stored little-endian, same as Arduino.
+  uint16_t result;
+  ((uint8_t *)&result)[0] = client.read(); // LSB
+  ((uint8_t *)&result)[1] = client.read(); // MSB
+  if (debugMode) {
+    Serial.print(result,HEX); Serial.print(" ");
+  } 
+  return result;
 }
 
 uint16_t read16(WiFiClient& client)
@@ -271,10 +283,14 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
       break;
     }
   }
-  //if (!connection_ok) return;
+  if (!connection_ok) {
+    Serial.print("Client disconnected"); 
+    return;
+  }
   // Parse BMP header
-  Serial.println("Searching for 0x4D42 start of BMP");
-  if (read16(client) == 0x4D42) // BMP signature
+  Serial.print("Searching for 0x4D42 start of BMP\n\n");
+  while (true) {
+  if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
     uint32_t fileSize = read32(client);
@@ -287,7 +303,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     uint16_t depth = read16(client); // bits per pixel
     uint32_t format = read32(client);
     uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
-    Serial.print("File size: "); Serial.println(fileSize);
+    Serial.printf("\n\nFile size: %d\n",fileSize); 
     Serial.print("Image Offset: "); Serial.println(imageOffset);
     Serial.print("Header size: "); Serial.println(headerSize);
     Serial.print("Bit Depth: "); Serial.println(depth);
@@ -438,11 +454,15 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
           display.drawPixel(col, yrow, color);
         } // end pixel
       } // end line
+    } else {
+      Serial.println("BMP not supported");
     }
 
     millisEnd = millis();
     Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+    break;
+    }
   }
   millisEnd = millis();
   
@@ -504,7 +524,7 @@ void setup() {
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
-    int secs = 10;
+    int secs = 1;
     display.powerDown();
 
       #ifdef ESP32
