@@ -27,6 +27,7 @@ int8_t eink_rotation = 0;
 //#define GDEW075T8    // 7.5" b/w 640x383
 //#define GDEW075T7    // 7.5" b/w 800x480
 //#define GDEP015OC1   // 1.54" b/w
+//#define GDEW0154Z17  // 1.54" b/w IL0373
 //#define GDEW0213I5F  // 2.13" b/w 104x212 flexible
 //#define GDE0213B1    // 2.13" b/w
 //#define GDEH0213B72  // 2.13" b/w new panel

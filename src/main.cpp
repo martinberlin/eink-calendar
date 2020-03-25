@@ -20,6 +20,8 @@
   #include <GxGDEW075T7/GxGDEW075T7.h> 
   #elif defined(GDEP015OC1)
   #include <GxGDEP015OC1/GxGDEP015OC1.h>
+  #elif defined(GDEW0154Z17)
+  #include <GxGDEW0154Z17/GxGDEW0154Z17.h> // Controller IL0373
   #elif defined(GDEW0213I5F)
   #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
   #elif defined(GDE0213B1)
@@ -504,10 +506,12 @@ void loop() {
 void setup() {
   Serial.begin(115200);
 
-  display.init();
+  display.init(115200);
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
+
+  
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED && connectTries<6) {
