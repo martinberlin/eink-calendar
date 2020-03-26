@@ -1,5 +1,8 @@
 #include <WString.h>
 
+// Uncomment to make it less verbose (And faster once it works)
+#define DEBUG_MODE
+
 // Each button corresponds to a Screen in --> CALE.es <-- Register to try it out!
 char screen1[] = "http://img.cale.es/bmp/USERNAME/SCREENID";
 String bearer1 = "cb79cd9e55121ff8f90a28c1ee8353dc53dc27131d87_YOUR_TOKEN";
