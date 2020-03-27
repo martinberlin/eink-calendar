@@ -20,6 +20,8 @@
   #include <GxGDEW075T7/GxGDEW075T7.h> 
   #elif defined(GDEP015OC1)
   #include <GxGDEP015OC1/GxGDEP015OC1.h>
+  #elif defined(GDEW0154Z04)
+  #include <GxGDEW0154Z04/GxGDEW0154Z04.h> // Controller IL0376F
   #elif defined(GDEW0154Z17)
   #include <GxGDEW0154Z17/GxGDEW0154Z17.h> // Controller IL0373
   #elif defined(GDEW0213I5F)
@@ -504,9 +506,14 @@ void loop() {
 }
 
 void setup() {
-  Serial.begin(115200);
 
+  Serial.begin(115200);
+  if (debugMode) {
   display.init(115200);
+  } else {
+    display.init();
+  }
+   
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
@@ -514,7 +521,7 @@ void setup() {
   
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<6) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<3) {
     Serial.print(" .");
     delay(500);
     connectTries++;
@@ -530,7 +537,7 @@ void setup() {
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
-    int secs = 10;
+    int secs = 1;
     display.powerDown();
 
       #ifdef ESP32
