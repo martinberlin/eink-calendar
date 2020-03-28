@@ -1,4 +1,4 @@
-![udpx Logo](/screenshot/cale-logo.svg)
+![CALE Logo](/screenshot/cale-logo.svg)
 
 # CALE E-ink calendar
 
