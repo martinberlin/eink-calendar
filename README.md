@@ -20,7 +20,7 @@ The goal is to build a dynamic calendar that is easy to install and has the lowe
 We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https://www.tinypico.com) please check the branch: 
 **cale_tinypico**
 
-Where we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was the lowest consumption we could achieve with an ESP32.
+Where we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
 
 ### Simple configuration
 
@@ -63,9 +63,9 @@ And passed to cale.es that verifies that your user owns this screen and also tha
 ### Hardware requirements
 
 To build one of this you can start easy and get something that needs no soldiering at all and comes already wired in a single PCB with an ESP32 included. If you want to start easy like this our recommendation is to get a [Lilygo T5](https://cale.es/firmware-t5).
-Now if you want to have a big Epaper like 800x480 then you need to wire it yourself. Please browser our supported [displays for CALE](https://cale.es/eink-displays)
+Now if you want to have a big Epaper like 800x480 then you need to wire the E-Ink SPI to the ESP32 yourself. The [displays for CALE](https://cale.es/eink-displays) are all the Epaper displays that the Jean Marc Zingg gxEPD library supports.
 
-The most important asset to achieve low consumption and long battery life is that the ESP32 you use consumes less than 1 mA/hour in deepsleep mode.
+The most important asset to achieve low consumption and long battery life is that the ESP32 you use consumes less than 1 mA/hour in deepsleep mode. So after a successful build use your amperimeter to measure how much it consumes on the 3.3 v line. Do not measure it with a USB miliamperimeter since you won't get the real amperage that is consuming from the battery.
 
 #### ESP32 wiring suggestion
 
