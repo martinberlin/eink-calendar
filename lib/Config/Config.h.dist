@@ -16,6 +16,13 @@ String bearer3 = "";
 #define WIFI_SSID "KabelBox-A210"
 #define WIFI_PASS ""
 
+
+// Deepsleep configuration
+#define DEEPSLEEP_ENABLED
+uint64_t DEEPSLEEP_SECONDS = 3600*3; // Ex. 3 hours
+// ESP server will be online for:   // Ex. 5 minutes
+#define SLEEP_AFTER_SECONDS 300
+
 // Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
 #define ENABLE_INTERNAL_IP_LOG
 // TTGO T5 buttons

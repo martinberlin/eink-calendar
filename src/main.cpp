@@ -671,6 +671,18 @@ void button_loop()
 void loop() {
   button_loop();
 
+  // Note: Enable deepsleep only as last step when all the rest is working as you expect
+#ifdef DEEPSLEEP_ENABLED
+  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
+      display.powerDown();
+
+      Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+      esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+      esp_deep_sleep_start();
+  }
+  secondsToDeepsleep++;
+  delay(1000);
+  #endif
   // In case of using a button to stream internet radio:
   /* if (playAudio) {
       if (mp3->isRunning()) {
