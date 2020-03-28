@@ -79,12 +79,14 @@ Mapping suggestion for ESP32, e.g. LOLIN32:
 
 ### Build logs and detailed instructions
 
-[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions
+
 [CALE Firmware](https://cale.es/firmware) Official page with more instructions and documentation
 
 ### Roadmap 
 
-**Apr 2020** We are working on a cale-app (Android) so we can ship pre-assembled EInks with a case and battery. This will enable us to configure the device on the go and also to have a more friendly way of configuring the device and adjust some Firmware settings.
+**Apr 2020** We are working on a cale-app (Android) so we can ship pre-assembled EInks with a case and battery. This will enable us to configure the device on the go and also to have a more friendly way of configuring the device and adjust some Firmware settings
+
 **Mar 2020** v1.0 of the CALE administrator is done and published. 20 users have registered, only 5 of them log in everyday and are requesting Bitmaps with their devices. Support is integrated now on the Admin, after login just go to:
 User -> Get support
 
