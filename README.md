@@ -2,7 +2,7 @@
 
 # CALE E-ink calendar
 
-## A very easy and straight-forward E-Ink calendar
+### A very easy and straight-forward E-Ink calendar
 
 The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
@@ -14,9 +14,13 @@ The original version and hackaday project is moved to the [legacy branch](https:
 ### Our approach to make an easy E-Ink calendar
 
 - A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
-- The Firmware driving the Eink display will wake up every morning or every 2 hours and read this screenshot. Then it will stay in deep sleep mode, consuming 1 miliamper from the battery, until it wakes up again and repeats the loop. 
+- The Firmware driving the Eink display will wake up every morning or every 2 hours and reads this screenshot. Then it will stay in deep sleep mode, consuming less than 1 miliamper from the battery, until it wakes up again and repeats the loop. 
 
 The goal is to build a dynamic calendar that is easy to install and has the lowest consumption as possible.
+We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https://www.tinypico.com) please check the branch: 
+**cale_tinypico**
+
+Where we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was the lowest consumption we could achieve with an ESP32.
 
 ### Simple configuration
 
@@ -31,7 +35,7 @@ Amount of seconds that the ESP32 is awake:
 
     #define SLEEP_AFTER_SECONDS 20 
 
-Note that ESP8266 uses another function to deepsleep and has a maximun deepsleep time of about 3 hours:
+Note that ESP8266 uses another function to deepsleep and has a maximum deepsleep time of about 3 hours:
 
     ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
 
@@ -76,6 +80,13 @@ Mapping suggestion for ESP32, e.g. LOLIN32:
 ### Build logs and detailed instructions
 
 [CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions.
+[CALE Firmware](https://cale.es/firmware) Official page with more instructions and documentation
+
+### Roadmap 
+
+**Apr 2020** We are working on a cale-app (Android) so we can ship pre-assembled EInks with a case and battery. This will enable us to configure the device on the go and also to have a more friendly way of configuring the device and adjust some Firmware settings.
+**Mar 2020** v1.0 of the CALE administrator is done and published. 20 users have registered, only 5 of them log in everyday and are requesting Bitmaps with their devices. Support is integrated now on the Admin, after login just go to:
+User -> Get support
 
 ### Support CALE
 
