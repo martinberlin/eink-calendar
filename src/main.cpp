@@ -653,6 +653,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
+  Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
 }
 
 /** Callback for receiving IP address from AP */
@@ -698,7 +699,7 @@ void loop() {
 
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
+  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
       display.powerDown();
       delay(10);
       #ifdef ESP32
