@@ -6,6 +6,8 @@
 
 The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
+**cale_ble** Bluetooth research branch
+
 **Now what remains here in master is the version that will just do two things only:**
 
 1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP

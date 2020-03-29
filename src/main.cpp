@@ -2,6 +2,13 @@
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
+  // Bluetooth arsenal:
+  #include <ArduinoJson.h>
+  #include <Preferences.h>
+  #include <nvs.h>
+  #include <nvs_flash.h>
+  Preferences preferences;
+
 #elif ESP8266
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
@@ -10,6 +17,14 @@
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
+
+#ifdef WIFI_BLE
+  #include "BluetoothSerial.h"
+  // SerialBT class
+  BluetoothSerial SerialBT;
+  StaticJsonDocument<900> jsonBuffer;
+  // DEBUG_MODE is compiled now and cannot be changed on runtime (Check lib/Config)
+#endif
 
 // Get the right interface for the display
 #ifdef GDEW042T2
@@ -57,7 +72,13 @@
   #elif defined(GDEW075Z08)
   #include <GxGDEW075Z08/GxGDEW075Z08.h>
 #endif
+// Copied verbatim from gxEPD example (See platformio.ini)
+static const uint16_t input_buffer_pixels = 640; // may affect performance
+static const uint16_t max_palette_pixels = 256; // for depth <= 8
 
+uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
+uint8_t mono_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 b/w
+uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 c/w
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
@@ -78,6 +99,25 @@ GxEPD_Class display(io, EINK_RST, EINK_BUSY );
 
 WiFiClient client; // wifi client object
 
+char apName[] = "CALE-xxxxxxxxxxxx";
+bool usePrimAP = true;
+/** Flag if stored AP credentials are available */
+bool hasCredentials = false;
+/** Connection status */
+volatile bool isConnected = false;
+bool connStatusChanged = false;
+uint8_t lostConnectionCount = 1;
+/** SSIDs/Password of local WiFi networks */
+String ssidPrim;
+String pwPrim;
+
+void deleteWifiCredentials() {
+	Serial.println("Clearing saved WiFi credentials");
+	preferences.begin("WiFiCred", false);
+	preferences.clear();
+	preferences.end();
+}
+
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
   Serial.println("DISPLAY prints: "+message);
@@ -93,6 +133,145 @@ void displayClean() {
   display.fillScreen(GxEPD_WHITE);
   display.update();
 }
+
+/** Callback for connection loss */
+void lostCon(system_event_id_t event) {
+	isConnected = false;
+	connStatusChanged = true;
+
+    Serial.printf("WiFi lost connection try %d to connect again\n", lostConnectionCount);
+	// Avoid trying to connect forever if the user made a typo in password
+	if (lostConnectionCount>4) {
+		deleteWifiCredentials();
+		ESP.restart();
+	} else if (lostConnectionCount>1) {
+		Serial.printf("Lost connection %d times", lostConnectionCount);
+	}
+	lostConnectionCount++;
+	#ifdef WIFI_BLE
+	  WiFi.begin(ssidPrim.c_str(), pwPrim.c_str());
+	#else
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+	#endif
+}
+
+#ifdef ESP32
+/**
+ * Create unique device name from MAC address
+ **/
+void createName() {
+	uint8_t baseMac[6];
+	// Get MAC address for WiFi station
+	esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+	// Write unique name into apName
+	sprintf(apName, "CALE-%02X%02X%02X%02X%02X%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
+}
+
+/**
+ * initBTSerial
+ * Initialize Bluetooth Serial
+ * Start BLE server and service advertising
+ * @return <code>bool</code>
+ * 			true if success
+ * 			false if error occured
+ */
+bool initBTSerial() {
+		if (!SerialBT.begin(apName)) {
+			Serial.println("Failed to start BTSerial");
+			return false;
+		}
+		Serial.println("BTSerial active. Device name: " + String(apName));
+		return true;
+}
+
+/**
+ * readBTSerial
+ * read all data from BTSerial receive buffer
+ * parse data for valid WiFi credentials
+ */
+void readBTSerial() {
+	if (!SerialBT.available()) return;
+	uint64_t startTimeOut = millis();
+	String receivedData;
+	int msgSize = 0;
+	// Read RX buffer into String
+	
+	while (SerialBT.available() != 0) {
+		receivedData += (char)SerialBT.read();
+		msgSize++;
+		// Check for timeout condition
+		if ((millis()-startTimeOut) >= 5000) break;
+	}
+	SerialBT.flush();
+	Serial.println("Received message " + receivedData + " over Bluetooth");
+
+	// Decode the message only if it comes encoded (Like ESP32 WIFI Ble does)
+	if (receivedData[0] != '{') {
+		int keyIndex = 0;
+		for (int index = 0; index < receivedData.length(); index ++) {
+			receivedData[index] = (char) receivedData[index] ^ (char) apName[keyIndex];
+			keyIndex++;
+			if (keyIndex >= strlen(apName)) keyIndex = 0;
+		}
+		Serial.println("Decoded message: " + receivedData); 
+	}
+	
+	/** Json object for incoming data */
+	auto error = deserializeJson(jsonBuffer, receivedData);
+	if (!error)
+	{
+		if (jsonBuffer.containsKey("ssidPrim") &&
+			jsonBuffer.containsKey("pwPrim") &&
+			jsonBuffer.containsKey("ssidSec") &&
+			jsonBuffer.containsKey("pwSec"))
+		{
+			ssidPrim = jsonBuffer["ssidPrim"].as<String>();
+			pwPrim = jsonBuffer["pwPrim"].as<String>();
+
+			Preferences preferences;
+			preferences.begin("WiFiCred", false);
+			preferences.putString("ssidPrim", ssidPrim);
+			preferences.putString("pwPrim", pwPrim);
+			preferences.putBool("valid", true);
+			preferences.end();
+
+			Serial.println("Received over bluetooth:");
+			Serial.println("primary SSID: "+ssidPrim+" password: "+pwPrim);
+			connStatusChanged = true;
+			hasCredentials = true;
+			delay(500);
+			Serial.println("Restarting with the preferences saved");
+			ESP.restart();
+		}
+		else if (jsonBuffer.containsKey("erase"))
+		{ // {"erase":"true"}
+			Serial.println("Received erase command");
+			Preferences preferences;
+			preferences.begin("WiFiCred", false);
+			preferences.clear();
+			preferences.end();
+			connStatusChanged = true;
+			hasCredentials = false;
+			ssidPrim = "";
+			pwPrim = "";
+
+			int err;
+			err=nvs_flash_init();
+			Serial.println("nvs_flash_init: " + err);
+			err=nvs_flash_erase();
+			Serial.println("nvs_flash_erase: " + err);
+		}
+		 else if (jsonBuffer.containsKey("reset")) {
+			WiFi.disconnect();
+			esp_restart();
+		}
+	} else {
+		Serial.println("Received invalid JSON");
+	}
+	jsonBuffer.clear();
+}
+#endif
+
 
 uint32_t skip(WiFiClient& client, int32_t bytes)
 {
@@ -218,13 +397,6 @@ String IpAddress2String(const IPAddress& ipAddress)
   String(ipAddress[2]) + String(".") +\
   String(ipAddress[3]);
 }
-// Copied verbatim from gxEPD example (See platformio.ini)
-static const uint16_t input_buffer_pixels = 640; // may affect performance
-static const uint16_t max_palette_pixels = 256; // for depth <= 8
-
-uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
-uint8_t mono_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 b/w
-uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 c/w
 
 void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
@@ -483,6 +655,45 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
 }
 
+/** Callback for receiving IP address from AP */
+void gotIP(system_event_id_t event) {
+
+	#ifdef WIFI_BLE
+    SerialBT.disconnect();
+	  SerialBT.end();
+    Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
+	#endif
+
+  // Read bitmap from web service: (bool with_color)
+  drawBitmapFrom_HTTP_ToBuffer(false);
+
+  if (isConnected) return;
+
+  isConnected = true;
+	connStatusChanged = true;
+
+	if (!MDNS.begin(apName)) {
+		Serial.println("Error setting up MDNS responder!");
+    }
+  MDNS.addService("http", "tcp", 80);
+}
+
+/**
+ * Start connection to AP
+ */
+void connectWiFi() {
+	// Setup callback function for successful connection
+	WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
+	// Setup callback function for lost connection
+	WiFi.onEvent(lostCon, SYSTEM_EVENT_STA_DISCONNECTED);
+
+	Serial.println();
+	Serial.print("Start connection to ");
+  
+  Serial.println(ssidPrim);
+  WiFi.begin(ssidPrim.c_str(), pwPrim.c_str());
+}
+
 void loop() {
 
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
@@ -509,44 +720,54 @@ void setup() {
 
   Serial.begin(115200);
   if (debugMode) {
-  display.init(115200);
+    display.init(115200);
   } else {
     display.init();
   }
+
+  Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
+  createName();
    
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
   display.setTextColor(GxEPD_BLACK);
 
   
-  uint8_t connectTries = 0;
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<3) {
-    Serial.print(" .");
-    delay(500);
-    connectTries++;
+#ifdef WIFI_BLE
+	preferences.begin("WiFiCred", false);
+    //preferences.clear(); // Uncomment to force delete preferences
+
+	bool hasPref = preferences.getBool("valid", false);
+	if (hasPref) {
+		ssidPrim = preferences.getString("ssidPrim","");
+		pwPrim = preferences.getString("pwPrim","");
+
+		if (ssidPrim.equals("") 
+				|| pwPrim.equals("")) {
+			Serial.println("Found preferences but credentials are invalid");
+		} else {
+			Serial.println("Read from preferences:");
+			Serial.println("primary SSID: "+ssidPrim+" password: "+pwPrim);
+			hasCredentials = true;
+		}
+	}  else {
+		Serial.println("Could not find preferences. Please send the WiFi config over Bluetooth with udpx Android application");
+    // Start Bluetooth serial. This reduces Heap memory like crazy so start it only if preferences are not set!
+    initBTSerial();
+    Serial.printf("initBTSerial() freeHeap: %d\n", ESP.getFreeHeap());
+	}
+	preferences.end();
+
+	if (hasCredentials) {
+	    connectWiFi();
   }
 
 
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("ONLINE");
-    Serial.println(WiFi.localIP());
-    
-   //New function that reads the URL from config:
-   drawBitmapFrom_HTTP_ToBuffer(false);
-  } else {
-    // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
-    //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
-    int secs = 1;
-    display.powerDown();
+	#else
+	  WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
+    WiFi.onEvent(lostCon, SYSTEM_EVENT_STA_DISCONNECTED);
+    Serial.printf("Connecting to Wi-Fi using WIFI_AP %s\n", WIFI_SSID);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+  #endif
 
-      #ifdef ESP32
-        Serial.printf("Going to sleep %d seconds\n", secs);
-        esp_sleep_enable_timer_wakeup(secs * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(1800e6);
-      #endif
-      }
 }
