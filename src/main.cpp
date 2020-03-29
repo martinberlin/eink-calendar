@@ -696,10 +696,14 @@ void connectWiFi() {
 }
 
 void loop() {
-
+  #ifdef WIFI_BLE
+  if (!isConnected) {
+    readBTSerial();
+  }
+  #endif
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
+  if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
       display.powerDown();
       delay(10);
       #ifdef ESP32
@@ -736,7 +740,7 @@ void setup() {
   
 #ifdef WIFI_BLE
 	preferences.begin("WiFiCred", false);
-    //preferences.clear(); // Uncomment to force delete preferences
+  //preferences.clear(); // Uncomment to force delete preferences
 
 	bool hasPref = preferences.getBool("valid", false);
 	if (hasPref) {
