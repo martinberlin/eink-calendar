@@ -405,9 +405,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   bool connection_ok = false;
   bool valid = false; // valid format to be handled
   bool flip = true; // bitmap is stored bottom-to-top
-  uint32_t startTime = millis();
-  
-    char *path;
+  char *path;
   char host[100];
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
@@ -472,7 +470,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   {
     int millisBmp = millis();
     uint32_t fileSize = read32(client);
-    uint32_t creatorBytes = read32(client);
+    read32(client); // creatorBytes
     uint32_t imageOffset = read32(client); // Start of image data
     uint32_t headerSize = read32(client);
     uint32_t width  = read32(client);
