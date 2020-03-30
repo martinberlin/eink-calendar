@@ -110,6 +110,8 @@ uint8_t lostConnectionCount = 1;
 /** SSIDs/Password of local WiFi networks */
 String ssidPrim;
 String pwPrim;
+String ssidSec;
+String pwSec;
 
 void deleteWifiCredentials() {
 	Serial.println("Clearing saved WiFi credentials");
@@ -654,6 +656,79 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
 }
 
+/**
+	 scanWiFi
+	 Scans for available networks 
+	 and decides if a switch between
+	 allowed networks makes sense
+	 @return <code>bool</code>
+	        True if at least one allowed network was found
+*/
+bool scanWiFi() {
+	/** RSSI for primary network */
+	int8_t rssiPrim = -1;
+	/** RSSI for secondary network */
+	int8_t rssiSec = -1;
+	/** Result of this function */
+	bool result = false;
+
+	Serial.println("Start scanning for networks");
+
+	WiFi.disconnect(true);
+	WiFi.enableSTA(true);
+	WiFi.mode(WIFI_STA);
+
+	// Scan for AP
+	int apNum = WiFi.scanNetworks(false,true,false,1000);
+	if (apNum == 0) {
+		Serial.println("Found no networks.");
+		return false;
+	}
+	
+	byte foundAP = 0;
+	bool foundPrim = false;
+
+	for (int index=0; index<apNum; index++) {
+		String ssid = WiFi.SSID(index);
+		Serial.println("Found AP: " + ssid + " RSSI: " + WiFi.RSSI(index));
+		if (!strcmp((const char*) &ssid[0], (const char*) &ssidPrim[0])) {
+			Serial.println("Found primary AP");
+			foundAP++;
+			foundPrim = true;
+			rssiPrim = WiFi.RSSI(index);
+		}
+		if (!strcmp((const char*) &ssid[0], (const char*) &ssidSec[0])) {
+			Serial.println("Found secondary AP");
+			foundAP++;
+			rssiSec = WiFi.RSSI(index);
+		}
+	}
+
+	switch (foundAP) {
+		case 0:
+			result = false;
+			break;
+		case 1:
+			if (foundPrim) {
+				usePrimAP = true;
+			} else {
+				usePrimAP = false;
+			}
+			result = true;
+			break;
+		default:
+			Serial.printf("RSSI Prim: %d Sec: %d\n", rssiPrim, rssiSec);
+			if (rssiPrim > rssiSec) {
+				usePrimAP = true; // RSSI of primary network is better
+			} else {
+				usePrimAP = false; // RSSI of secondary network is better
+			}
+			result = true;
+			break;
+	}
+	return result;
+}
+
 /** Callback for receiving IP address from AP */
 void gotIP(system_event_id_t event) {
 
@@ -762,9 +837,20 @@ void setup() {
 	preferences.end();
 
 	if (hasCredentials) {
-	    connectWiFi();
+    #ifdef WIFI_BLE_TWO_APS
+		// Enable this define WIFI_TWO_APS: If you want to set up 2 APs with ESP32WiFi BLE app
+		if (!scanWiFi()) {
+        int secs = 5;
+			  Serial.printf("Going to sleep %d seconds and restarting\n", secs);
+        esp_sleep_enable_timer_wakeup(secs * USEC);
+        esp_deep_sleep_start();
+		} else {
+			connectWiFi();
+		}
+		#else
+		  connectWiFi();
+		#endif
   }
-
 
 	#else
 	  WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
