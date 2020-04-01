@@ -25,7 +25,8 @@
   StaticJsonDocument<900> jsonBuffer;
   // DEBUG_MODE is compiled now and cannot be changed on runtime (Check lib/Config)
 #endif
-
+String screenUrl;
+String bearer;
 // Get the right interface for the display
 #ifdef GDEW042T2
   #include <GxGDEW042T2/GxGDEW042T2.h>
@@ -227,6 +228,8 @@ void readBTSerial() {
 			jsonBuffer.containsKey("wifi_ssid2") &&
 			jsonBuffer.containsKey("wifi_pass2"))
 		{
+      bearer     = jsonBuffer["bearer"].as<String>();
+      screenUrl  = jsonBuffer["screen_url"].as<String>();
 			wifi_ssid1 = jsonBuffer["wifi_ssid1"].as<String>();
 			wifi_pass1 = jsonBuffer["wifi_pass1"].as<String>();
 			wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
@@ -237,6 +240,8 @@ void readBTSerial() {
 			preferences.putString("wifi_pass1", wifi_pass1);
       preferences.putString("wifi_ssid2", wifi_ssid2);
 			preferences.putString("wifi_pass2", wifi_pass2);
+      preferences.putString("screen_url", screenUrl);
+			preferences.putString("bearer"    , bearer);
 			preferences.putBool("valid", true);
 			preferences.end();
 
@@ -345,13 +350,15 @@ uint32_t read32(WiFiClient& client)
   return result;
 }
 
-bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len, bool *secure){
-  if(url==NULL){
+bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *host_len, bool *secure){
+  if(screen_uri==""){
+    Serial.println("screen_uri is empty at parsePathInformation()");
     return false;
   }
   char *host_start = NULL;
   bool path_resolved = false;
   unsigned hostname_length = 0;
+  char *url = (char *)screen_uri.c_str();
   for(unsigned i = 0; i < strlen(url); i++){
     switch (url[i])
     {
@@ -436,15 +443,12 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   if (debugMode) {
     Serial.println(request);
   }
-
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
     Serial.println("connection failed");
     return;
   }
-  Serial.print("Requesting URL: ");
-  Serial.println(String(host) + String(path));
   client.connect(host, 80);
   client.print(request); //send the http request to the server
   client.flush();
@@ -825,13 +829,17 @@ void setup() {
 	if (hasPref) {
 		wifi_ssid1 = preferences.getString("wifi_ssid1","");
 		wifi_pass1 = preferences.getString("wifi_pass1","");
-
+    wifi_ssid2 = preferences.getString("wifi_ssid2","");
+		wifi_pass2 = preferences.getString("wifi_pass2","");
+    screenUrl  = preferences.getString("screen_url","");
+		bearer     = preferences.getString("bearer","");
 		if (wifi_ssid1.equals("") || wifi_pass1.equals("")) {
 			Serial.println("Found preferences but credentials are invalid");
       initBTSerial();
 		} else {
 			Serial.println("Read from preferences:");
 			Serial.println("primary SSID: "+wifi_ssid1+" password: "+wifi_pass1);
+      Serial.println("screen_url: "+screenUrl+" bearer: "+bearer);
 			hasCredentials = true;
 		}
 	}  else {
