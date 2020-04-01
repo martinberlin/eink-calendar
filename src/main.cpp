@@ -108,10 +108,10 @@ volatile bool isConnected = false;
 bool connStatusChanged = false;
 uint8_t lostConnectionCount = 1;
 /** SSIDs/Password of local WiFi networks */
-String ssidPrim;
-String pwPrim;
-String ssidSec;
-String pwSec;
+String wifi_ssid1;
+String wifi_pass1;
+String wifi_ssid2;
+String wifi_pass2;
 
 void deleteWifiCredentials() {
 	Serial.println("Clearing saved WiFi credentials");
@@ -151,7 +151,7 @@ void lostCon(system_event_id_t event) {
 	}
 	lostConnectionCount++;
 	#ifdef WIFI_BLE
-	  WiFi.begin(ssidPrim.c_str(), pwPrim.c_str());
+	  WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
 	#else
       WiFi.begin(WIFI_SSID, WIFI_PASS);
 	#endif
@@ -222,23 +222,26 @@ void readBTSerial() {
 	auto error = deserializeJson(jsonBuffer, receivedData);
 	if (!error)
 	{
-		if (jsonBuffer.containsKey("ssidPrim") &&
-			jsonBuffer.containsKey("pwPrim") &&
-			jsonBuffer.containsKey("ssidSec") &&
-			jsonBuffer.containsKey("pwSec"))
+		if (jsonBuffer.containsKey("wifi_ssid1") &&
+			jsonBuffer.containsKey("wifi_pass1") &&
+			jsonBuffer.containsKey("wifi_ssid2") &&
+			jsonBuffer.containsKey("wifi_pass2"))
 		{
-			ssidPrim = jsonBuffer["ssidPrim"].as<String>();
-			pwPrim = jsonBuffer["pwPrim"].as<String>();
-
+			wifi_ssid1 = jsonBuffer["wifi_ssid1"].as<String>();
+			wifi_pass1 = jsonBuffer["wifi_pass1"].as<String>();
+			wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
+			wifi_pass2 = jsonBuffer["wifi_pass2"].as<String>();
 			Preferences preferences;
 			preferences.begin("WiFiCred", false);
-			preferences.putString("ssidPrim", ssidPrim);
-			preferences.putString("pwPrim", pwPrim);
+			preferences.putString("wifi_ssid1", wifi_ssid1);
+			preferences.putString("wifi_pass1", wifi_pass1);
+      preferences.putString("wifi_ssid2", wifi_ssid2);
+			preferences.putString("wifi_pass2", wifi_pass2);
 			preferences.putBool("valid", true);
 			preferences.end();
 
 			Serial.println("Received over bluetooth:");
-			Serial.println("primary SSID: "+ssidPrim+" password: "+pwPrim);
+			Serial.println("primary SSID: "+wifi_ssid1+" password: "+wifi_pass1);
 			connStatusChanged = true;
 			hasCredentials = true;
 			delay(500);
@@ -254,8 +257,8 @@ void readBTSerial() {
 			preferences.end();
 			connStatusChanged = true;
 			hasCredentials = false;
-			ssidPrim = "";
-			pwPrim = "";
+			wifi_ssid1 = "";
+			wifi_pass1 = "";
 
 			int err;
 			err=nvs_flash_init();
@@ -691,13 +694,13 @@ bool scanWiFi() {
 	for (int index=0; index<apNum; index++) {
 		String ssid = WiFi.SSID(index);
 		Serial.println("Found AP: " + ssid + " RSSI: " + WiFi.RSSI(index));
-		if (!strcmp((const char*) &ssid[0], (const char*) &ssidPrim[0])) {
+		if (!strcmp((const char*) &ssid[0], (const char*) &wifi_ssid1[0])) {
 			Serial.println("Found primary AP");
 			foundAP++;
 			foundPrim = true;
 			rssiPrim = WiFi.RSSI(index);
 		}
-		if (!strcmp((const char*) &ssid[0], (const char*) &ssidSec[0])) {
+		if (!strcmp((const char*) &ssid[0], (const char*) &wifi_ssid2[0])) {
 			Serial.println("Found secondary AP");
 			foundAP++;
 			rssiSec = WiFi.RSSI(index);
@@ -761,11 +764,14 @@ void connectWiFi() {
 	// Setup callback function for lost connection
 	WiFi.onEvent(lostCon, SYSTEM_EVENT_STA_DISCONNECTED);
 
-	Serial.println();
-	Serial.print("Start connection to ");
-  
-  Serial.println(ssidPrim);
-  WiFi.begin(ssidPrim.c_str(), pwPrim.c_str());
+ 	Serial.println("Start connection to ");
+	if (usePrimAP) {
+		Serial.println(wifi_ssid1);
+		WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
+	} else {
+		Serial.println(wifi_ssid2);
+		WiFi.begin(wifi_ssid2.c_str(), wifi_pass2.c_str());
+	}
 }
 
 void loop() {
@@ -817,15 +823,15 @@ void setup() {
 
 	bool hasPref = preferences.getBool("valid", false);
 	if (hasPref) {
-		ssidPrim = preferences.getString("ssidPrim","");
-		pwPrim = preferences.getString("pwPrim","");
+		wifi_ssid1 = preferences.getString("wifi_ssid1","");
+		wifi_pass1 = preferences.getString("wifi_pass1","");
 
-		if (ssidPrim.equals("") 
-				|| pwPrim.equals("")) {
+		if (wifi_ssid1.equals("") || wifi_pass1.equals("")) {
 			Serial.println("Found preferences but credentials are invalid");
+      initBTSerial();
 		} else {
 			Serial.println("Read from preferences:");
-			Serial.println("primary SSID: "+ssidPrim+" password: "+pwPrim);
+			Serial.println("primary SSID: "+wifi_ssid1+" password: "+wifi_pass1);
 			hasCredentials = true;
 		}
 	}  else {
