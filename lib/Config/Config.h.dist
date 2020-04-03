@@ -1,10 +1,8 @@
+// Welcome to CALE branch: cale_ble  bluetooth version of the Firmware
 #include <WString.h>
 
-// In cale branch this URL represents the final image URL. 
-// --> https://cale.es <--  Get in CALE your image URL
-char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
-// Private Screen Token. Leave as "" if the screen is public
-String bearer="";
+// NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
+// --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
 
 // Your WiFi Credentials
 #define WIFI_SSID "Your WiFi Name"

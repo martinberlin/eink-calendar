@@ -13,6 +13,8 @@ The original version and hackaday project is moved to the [legacy branch](https:
 1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
 2. Will go to sleep the amount of seconds defined in Config and return to point 1
 
+Please read the short instructions on [configuring the Firmware over Bluetooth](https://cale.es/firmware-bluetooth) to understand how it works.
+
 ### Our approach to make an easy E-Ink calendar
 
 - A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
