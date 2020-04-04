@@ -421,6 +421,9 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   char host[100];
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
+
+  //Serial.print("Before parsePath: ");Serial.println(screenUrl);
+
   if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
     Serial.println("Parsing error!");
     Serial.println(host);
@@ -784,11 +787,10 @@ void loop() {
     readBTSerial();
   }
   #endif
+
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
-      display.powerDown();
-      delay(10);
       #ifdef ESP32
         Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
         esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
