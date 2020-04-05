@@ -1,4 +1,5 @@
 #include <Config.h>
+
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
@@ -8,17 +9,13 @@
   #include <DNSServer.h>
 #endif
 #include <WiFiClient.h>
-#include <SPI.h>
 // JPEG decoder library
 #include <JPEGDecoder.h>
 #include <TFT_eSPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
-// FONT used for title / message body
-// Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
-#include <Fonts/FreeMonoBold12pt7b.h>
-#include <Fonts/FreeMonoBold24pt7b.h>
 
+uint8_t u8cursor = 10;
 bool debugMode = false;
 
 unsigned int secondsToDeepsleep = 0;
@@ -179,6 +176,16 @@ void loop() {
 
 void setup() {
   Serial.begin(115200);
+  delay(100);
+  Serial.print("MOSI:");Serial.println(TFT_MOSI);
+
+  tft.begin();
+  tft.setRotation(2);  // 0 & 2 Portrait. 1 & 3 landscape
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_GREENYELLOW);
+  tft.setCursor(0, u8cursor);
+  tft.print("Connecting to WiFi");
+  tft.setTextColor(TFT_BLUE);
 
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
