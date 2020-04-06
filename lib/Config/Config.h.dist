@@ -4,9 +4,7 @@
 // NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
 // --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
 
-// Your WiFi Credentials
-#define WIFI_SSID "Your WiFi Name"
-#define WIFI_PASS ""
+// Your WiFi Credentials are not defined here, they are saved in Preferences and sent by bluetooth
 
 // When it reaches this number your credentials stored on Non-volatile storage on ESP32 processor
 // Put this to a high number after you get it working correctly:
