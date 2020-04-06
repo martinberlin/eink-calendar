@@ -8,6 +8,10 @@
 #define WIFI_SSID "Your WiFi Name"
 #define WIFI_PASS ""
 
+// When it reaches this number your credentials stored on Non-volatile storage on ESP32 processor
+// Put this to a high number after you get it working correctly:
+#define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 20
+
 // E-ink SPI
 // ESP8266          |  ESP32 GPIO in comments
 int8_t EINK_CS = 5;    // 5

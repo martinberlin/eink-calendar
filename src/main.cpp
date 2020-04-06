@@ -85,9 +85,8 @@ uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for dept
 
 // FONT used for title / message body
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
+#include <Fonts/FreeMono9pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
-#include <Fonts/FreeMonoBold24pt7b.h>
-
 bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
@@ -124,11 +123,10 @@ void deleteWifiCredentials() {
 // Displays message doing a partial update
 void displayMessage(String message, int height) {
   Serial.println("DISPLAY prints: "+message);
-  display.setTextColor(GxEPD_WHITE);
-  display.fillRect(0,0,display.width(),height,GxEPD_BLACK);
-  display.setCursor(2, 25);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(2, height);
   display.print(message);
-  display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
+  //display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
   display.update(); // -> Since could not make partial updateWindow work
 }
 
@@ -183,6 +181,7 @@ bool initBTSerial() {
 			Serial.println("Failed to start BTSerial");
 			return false;
 		}
+    displayMessage("Starting Bluetooth server, please open the  Android app and connect with:"+String(apName),20);
 		Serial.println("BTSerial active. Device name: " + String(apName));
 		return true;
 }
@@ -358,6 +357,7 @@ bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *
   char *host_start = NULL;
   bool path_resolved = false;
   unsigned hostname_length = 0;
+  
   char *url = (char *)screen_uri.c_str();
   for(unsigned i = 0; i < strlen(url); i++){
     switch (url[i])
@@ -806,6 +806,10 @@ void loop() {
 
 }
 
+void resetPreferences() {
+   preferences.clear();
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -819,14 +823,30 @@ void setup() {
   createName();
    
   display.setRotation(eink_rotation); // Rotates display N times clockwise
-  display.setFont(&FreeMonoBold12pt7b);
+  if (display.width()>250) {
+    display.setFont(&FreeMonoBold12pt7b);
+  } else {
+    display.setFont(&FreeMono9pt7b);
+  }
   display.setTextColor(GxEPD_BLACK);
-
   
 #ifdef WIFI_BLE
 	preferences.begin("WiFiCred", false);
-  //preferences.clear(); // Uncomment to force delete preferences
 
+  // Get the counter value, if the key does not exist, return a default value of 0
+  // Note: Key name is limited to 15 chars.
+  unsigned int counter = preferences.getUInt("counter", 0);
+
+  // Increase counter by 1
+  counter++;
+  preferences.putUInt("counter", counter);
+  Serial.printf("ESP32 has restarted %d times\n", counter);
+  if (counter > RESTART_TIMES_BEFORE_CREDENTIALS_RESET) {
+    Serial.println("Resetting Credentials");
+    // Comment if you don't want to let the counter delete your credentials
+    resetPreferences(); 
+  }
+  
 	bool hasPref = preferences.getBool("valid", false);
 	if (hasPref) {
 		wifi_ssid1 = preferences.getString("wifi_ssid1","");
