@@ -8,13 +8,14 @@ The original version and hackaday project is moved to the [legacy branch](https:
 
 **cale_ble** Bluetooth research branch
 
-**cale_ble_v2** Check this branch for the latest Bluetooth version where we [used char instead of String to generate the WiFi Client request](https://github.com/martinberlin/eink-calendar/compare/cale_ble...cale_ble_v2?expand=1)
+**cale_ble_v2** Check this branch for the latest Bluetooth version where we [used char instead of String to generate the WiFi Client request](https://github.com/martinberlin/eink-calendar/commit/5586b062370ac2390ecd5474a56634984e49480f)
 and so far seems to be a better candidate than the first try. 
 
-**Now what remains here in master is the version that will just do two things only:**
+**The Bluetooth version of CALE does this 3 things only:**
 
-1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
-2. Will go to sleep the amount of seconds defined in Config and return to point 1
+1. In case of no WiFi config, opens Bluetooth and waits for configuration, please send it [installing CALE Android app](https://github.com/martinberlin/cale-app/tree/master/releases)
+2. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP, create an account if you want to have a ready made web-service, that renders BMPs ready for your displays
+3. Will go to sleep the amount of seconds defined in Config and return to point 1
 
 Please read the short instructions on [configuring the Firmware over Bluetooth](https://cale.es/firmware-bluetooth) to understand how it works.
 
@@ -29,73 +30,7 @@ We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https:
 
 Where we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
 
-### Simple configuration
-
-Just rename lib/Config/Config.h.dist to Config.h
-and fill it with your WiFi name and password.
-
-If you want to enable deepsleep to power your calendar with batteries, then uncomment the line:
-
-    //#define DEEPSLEEP_ENABLED
-
-Amount of seconds that the ESP32 is awake:
-
-    #define SLEEP_AFTER_SECONDS 20 
-
-Note that ESP8266 uses another function to deepsleep and has a maximum deepsleep time of about 3 hours:
-
-    ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
-
-**Most important part of the configuration:**
-
-    char screenUrl[] = "http://img.cale.es/bmp/USERNAME/SCREEN_ID";
-    
-    // Security setting, leave empty if your screen is publis
-    String bearer = "";
-
-Note that we don't recommend to use public screens since your calendar may contain private information like events, transfer or doctor appointments that you should not open to the world to see. So use always a security token.
-
-This token is sent in the headers like:
-
-Authorization: Bearer YOUR_TOKEN
-
-And passed to cale.es that verifies that your user owns this screen and also that the token matches the one that is stored on our servers.
-
-### Schematics
-
-![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
-
-[Check more information and detailed schematics for the ESP32](https://cale.es/firmware)
-
-### Hardware requirements
-
-To build one of this you can start easy and get something that needs no soldiering at all and comes already wired in a single PCB with an ESP32 included. If you want to start easy like this our recommendation is to get a [Lilygo T5](https://cale.es/firmware-t5).
-Now if you want to have a big Epaper like 800x480 then you need to wire the E-Ink SPI to the ESP32 yourself. The [displays for CALE](https://cale.es/eink-displays) are all the Epaper displays that the Jean Marc Zingg gxEPD library supports.
-
-The most important asset to achieve low consumption and long battery life is that the ESP32 you use consumes less than 1 mA/hour in deepsleep mode. So after a successful build use your amperimeter to measure how much it consumes on the 3.3 v line. Do not measure it with a USB miliamperimeter since you won't get the real amperage that is consuming from the battery.
-
-#### ESP32 wiring suggestion
-
-Mapping suggestion for ESP32, e.g. LOLIN32:
-
-    This pins defined in lib/Config/Config.h
-    BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)  
-
-    This ones are fixed
-    CLK -> SCK(18), DIN -> MOSI(23)
-
-### Build logs and detailed instructions
-
-[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions
-
-[CALE Firmware](https://cale.es/firmware) Official page with more instructions and documentation
-
-### Roadmap 
-
-**Apr 2020** We are working on a cale-app (Android) so we can ship pre-assembled EInks with a case and battery. This will enable us to configure the device on the go and also to have a more friendly way of configuring the device and adjust some Firmware settings
-
-**Mar 2020** v1.0 of the CALE administrator is done and published. 20 users have registered, only 5 of them log in everyday and are requesting Bitmaps with their devices. Support is integrated now on the Admin, after login just go to:
-User -> Get support
+For the rest of contents please refer to the master branch since it takes a long time to update the README files across branches and does not make too much sense.
 
 ### Support CALE
 
