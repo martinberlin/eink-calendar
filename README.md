@@ -8,6 +8,9 @@ The original version and hackaday project is moved to the [legacy branch](https:
 
 **cale_ble** Bluetooth research branch
 
+**cale_ble_v2** Check this branch for the latest Bluetooth version where we [used char instead of String to generate the WiFi Client request](https://github.com/martinberlin/eink-calendar/compare/cale_ble...cale_ble_v2?expand=1)
+and so far seems to be a better candidate than the first try. 
+
 **Now what remains here in master is the version that will just do two things only:**
 
 1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
