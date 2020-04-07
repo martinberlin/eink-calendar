@@ -169,7 +169,7 @@ bool initBTSerial() {
 			Serial.println("Failed to start BTSerial");
 			return false;
 		}
-    displayMessage("Starting Bluetooth server, please open the  Android app and connect with:"+String(apName),20);
+    displayMessage("Bluetooth started\nOpen CALE Android app and connect with:\n"+String(apName)+"\n\nwww.CALE.es",20);
 		Serial.println("BTSerial active. Device name: " + String(apName));
 		return true;
 }
