@@ -1,30 +1,23 @@
 #include <Config.h>
-#ifdef ESP32
-  #include <WiFi.h>
-  #include <ESPmDNS.h>
-  // Bluetooth arsenal:
-  #include <ArduinoJson.h>
-  #include <Preferences.h>
-  #include <nvs.h>
-  #include <nvs_flash.h>
-  Preferences preferences;
-
-#elif ESP8266
-  #include <ESP8266WiFi.h>
-  #include <ESP8266mDNS.h>
-  #include <DNSServer.h>
-#endif
+#include <string>
+// Please note this version is only ESP32
+#include <WiFi.h>
+#include <ESPmDNS.h>
+// Bluetooth arsenal:
+#include <ArduinoJson.h>
+#include <Preferences.h>
+#include <nvs.h>
+#include <nvs_flash.h>
+Preferences preferences;
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
 
-#ifdef WIFI_BLE
-  #include "BluetoothSerial.h"
-  // SerialBT class
-  BluetoothSerial SerialBT;
-  StaticJsonDocument<900> jsonBuffer;
-  // DEBUG_MODE is compiled now and cannot be changed on runtime (Check lib/Config)
-#endif
+#include "BluetoothSerial.h"
+// SerialBT class
+BluetoothSerial SerialBT;
+StaticJsonDocument<900> jsonBuffer;
+// DEBUG_MODE is compiled now and cannot be changed on runtime (Check lib/Config)
 String screenUrl;
 String bearer;
 // Get the right interface for the display
@@ -149,14 +142,9 @@ void lostCon(system_event_id_t event) {
 		Serial.printf("Lost connection %d times", lostConnectionCount);
 	}
 	lostConnectionCount++;
-	#ifdef WIFI_BLE
-	  WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
-	#else
-      WiFi.begin(WIFI_SSID, WIFI_PASS);
-	#endif
+  WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
 }
 
-#ifdef ESP32
 /**
  * Create unique device name from MAC address
  **/
@@ -181,7 +169,7 @@ bool initBTSerial() {
 			Serial.println("Failed to start BTSerial");
 			return false;
 		}
-    displayMessage("Starting Bluetooth server, please open the  Android app and connect with:"+String(apName),20);
+    displayMessage("Bluetooth started\nOpen CALE Android app and connect with:\n"+String(apName)+"\n\nwww.CALE.es",20);
 		Serial.println("BTSerial active. Device name: " + String(apName));
 		return true;
 }
@@ -279,8 +267,6 @@ void readBTSerial() {
 	}
 	jsonBuffer.clear();
 }
-#endif
-
 
 uint32_t skip(WiFiClient& client, int32_t bytes)
 {
@@ -399,17 +385,6 @@ bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *
   return false;
 }
 
-/**
- * Convert the internal IP to string
- */
-String IpAddress2String(const IPAddress& ipAddress)
-{
-  return String(ipAddress[0]) + String(".") +\
-  String(ipAddress[1]) + String(".") +\
-  String(ipAddress[2]) + String(".") +\
-  String(ipAddress[3]);
-}
-
 void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
   int millisIni = millis();
@@ -422,27 +397,38 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
 
-  //Serial.print("Before parsePath: ");Serial.println(screenUrl);
-
   if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
     Serial.println("Parsing error!");
     Serial.println(host);
     return;
   }
-  String request;
-  request  = "POST " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(host) + "\r\n";
-  if (bearer != "") {
-    request += "Authorization: Bearer "+bearer+ "\r\n";
-  }
+char request[1999];
+strcpy(request, "POST ");
+strcat(request, path);
+strcat(request, " HTTP/1.1\r\n");
+strcat(request, "Host: ");
+strcat(request, host);
+strcat(request, "\r\n");
+
+if (bearer != "") {
+  strcat(request, "Authorization: Bearer ");strcat(request,bearer.c_str());strcat(request,"\r\n");
+}
 
 #ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+IpAddress2String(WiFi.localIP());
-  request += "Content-Type: application/x-www-form-urlencoded\r\n";
-  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
-  request += localIp +"\r\n";
+  char localIp[30];
+  String ip = WiFi.localIP().toString();
+  uint8_t ipLenght = ip.length()+3;
+  strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
+  strcat(request, "Content-Length: ");
+  char cLength[4];
+  itoa(ipLenght, cLength, 10);
+  strcat(request, cLength);
+  strcat(request, "\r\n\r\n");
+  strcat(request, "ip=");strcat(request, ip.c_str());
+  strcat(request, "\r\n");
 #endif
-  request += "\r\n";
+
+  strcat(request, "\r\n");
   if (debugMode) {
     Serial.println(request);
   }
@@ -453,6 +439,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     return;
   }
   client.connect(host, 80);
+
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -478,6 +465,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   // Parse BMP header
   Serial.print("Searching for 0x4D42 start of BMP\n\n");
   while (true) {
+    yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
@@ -741,13 +729,9 @@ bool scanWiFi() {
 
 /** Callback for receiving IP address from AP */
 void gotIP(system_event_id_t event) {
-
-	#ifdef WIFI_BLE
-    SerialBT.disconnect();
-	  SerialBT.end();
-    Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
-	#endif
-
+  SerialBT.disconnect();
+  SerialBT.end();
+  Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
   // Read bitmap from web service: (bool with_color)
   drawBitmapFrom_HTTP_ToBuffer(false);
 
@@ -782,12 +766,9 @@ void connectWiFi() {
 }
 
 void loop() {
-  #ifdef WIFI_BLE
   if (!isConnected) {
     readBTSerial();
   }
-  #endif
-
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
@@ -830,7 +811,6 @@ void setup() {
   }
   display.setTextColor(GxEPD_BLACK);
   
-#ifdef WIFI_BLE
 	preferences.begin("WiFiCred", false);
 
   // Get the counter value, if the key does not exist, return a default value of 0
@@ -861,7 +841,8 @@ void setup() {
 		} else {
 			Serial.println("Read from preferences:");
 			Serial.println("primary SSID: "+wifi_ssid1+" password: "+wifi_pass1);
-      Serial.println("screen_url: "+screenUrl+" bearer: "+bearer);
+      Serial.println("screen_url: "+screenUrl);
+      Serial.println("bearer: "+bearer);
 			hasCredentials = true;
 		}
 	}  else {
@@ -873,7 +854,6 @@ void setup() {
 	preferences.end();
 
 	if (hasCredentials) {
-    #ifdef WIFI_BLE_TWO_APS
 		// Enable this define WIFI_TWO_APS: If you want to set up 2 APs with ESP32WiFi BLE app
 		if (!scanWiFi()) {
         int secs = 5;
@@ -883,16 +863,5 @@ void setup() {
 		} else {
 			connectWiFi();
 		}
-		#else
-		  connectWiFi();
-		#endif
   }
-
-	#else
-	  WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
-    WiFi.onEvent(lostCon, SYSTEM_EVENT_STA_DISCONNECTED);
-    Serial.printf("Connecting to Wi-Fi using WIFI_AP %s\n", WIFI_SSID);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-  #endif
-
 }
