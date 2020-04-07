@@ -465,6 +465,7 @@ if (bearer != "") {
   // Parse BMP header
   Serial.print("Searching for 0x4D42 start of BMP\n\n");
   while (true) {
+    yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
@@ -840,7 +841,8 @@ void setup() {
 		} else {
 			Serial.println("Read from preferences:");
 			Serial.println("primary SSID: "+wifi_ssid1+" password: "+wifi_pass1);
-      Serial.println("screen_url: "+screenUrl+" bearer: "+bearer);
+      Serial.println("screen_url: "+screenUrl);
+      Serial.println("bearer: "+bearer);
 			hasCredentials = true;
 		}
 	}  else {
