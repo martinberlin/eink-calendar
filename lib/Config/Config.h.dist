@@ -64,10 +64,9 @@ uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
 // This is useful to see what device calls the image but also because CALE admin logs requests too just without IP
 #define ENABLE_INTERNAL_IP_LOG
 
-// Enables fast query to img.cale.es to check if the Eink has to refresh or not
-#define ENABLE_SERVICE_TIMES
-// ESP server will be online for: 
-#define SLEEP_AFTER_SECONDS 60 
+
+// ESP server will loop for this seconds (In case there is anything extra to do after rendering)
+#define SLEEP_AFTER_SECONDS 5 
 
 /* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
 CLK  = D8;
