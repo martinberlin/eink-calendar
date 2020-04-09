@@ -1,6 +1,9 @@
 // Welcome to CALE branch: cale_ble  bluetooth version of the Firmware
 #include <WString.h>
 
+// Uncomment to enable verbose mode both for main.cpp and gxEPD display library
+#define DEBUG_MODE
+
 // NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
 // --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
 
@@ -21,8 +24,6 @@ int8_t EINK_BUSY = 12; // 4
 int8_t eink_rotation = 0;
 
 // SELECT YOUR E-INK Model uncommenting only one line  (For more info check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display )
-// Note: The V1 version of 7.5" Waveshare works for ESP8266. But the V2 with 800*480 pixels, could not make it work, requires too much memory. In ESP32 works fine
-
 //#define GDEW042T2
 //#define GDEW075T8    // 7.5" b/w 640x383
 //#define GDEW075T7    // 7.5" b/w 800x480
@@ -49,8 +50,11 @@ int8_t eink_rotation = 0;
 #define DEEPSLEEP_ENABLED
 // Note: ESP8266 is not using this but 3 hrs fixed in the code since is the max time (search: 10800e6 in main.cpp)
 uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
-// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE (May be useful to identify issues)
+
+// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE 
+// This is useful to see what device calls the image but also because CALE admin logs requests too just without IP
 #define ENABLE_INTERNAL_IP_LOG
+
 // ESP server will be online for: 
 #define SLEEP_AFTER_SECONDS 60 
 

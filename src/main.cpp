@@ -80,7 +80,6 @@ uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for dept
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMono9pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
-bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
@@ -309,9 +308,9 @@ uint16_t read16bmp(WiFiClient& client)
   uint16_t result;
   ((uint8_t *)&result)[0] = client.read(); // LSB
   ((uint8_t *)&result)[1] = client.read(); // MSB
-  if (debugMode) {
+  #ifdef DEBUG_MODE
     Serial.print(result,HEX); Serial.print(" ");
-  } 
+  #endif
   return result;
 }
 
@@ -429,17 +428,15 @@ if (bearer != "") {
 #endif
 
   strcat(request, "\r\n");
-  if (debugMode) {
+  #ifdef DEBUG_MODE
     Serial.println(request);
-  }
+  #endif
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
     Serial.println("connection failed");
     return;
   }
-  client.connect(host, 80);
-
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -732,6 +729,7 @@ void gotIP(system_event_id_t event) {
   SerialBT.disconnect();
   SerialBT.end();
   Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
+
   // Read bitmap from web service: (bool with_color)
   drawBitmapFrom_HTTP_ToBuffer(false);
 
@@ -794,11 +792,11 @@ void resetPreferences() {
 void setup() {
 
   Serial.begin(115200);
-  if (debugMode) {
+  #ifdef DEBUG_MODE
     display.init(115200);
-  } else {
+  #else
     display.init();
-  }
+  #endif
 
   Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
   createName();
