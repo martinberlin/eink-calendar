@@ -1,8 +1,16 @@
 // Welcome to CALE branch: cale_ble  bluetooth version of the Firmware
 #include <WString.h>
 
-// Uncomment to enable verbose mode both for main.cpp and gxEPD display library
+// If you will use ESP32 tinypico.com uncomment to save power
+// #define TINYPICO
+
+// Uncomment to disable service times check against CALE (Prevents refreshes at night and weekends)
+#define ENABLE_SERVICE_TIMES
+
+// Comment to disable verbose mode both for main.cpp and gxEPD display library
 #define DEBUG_MODE
+// Uncomment if you just want to select between 2 WiFis (It works but probed to be less stable for me)
+// #define WIFI_TWO_APS
 
 // NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
 // --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
@@ -10,7 +18,8 @@
 // Your WiFi Credentials are not defined here, they are saved in Preferences and sent by bluetooth
 
 // Note this is mainly an internal debugging option for us. Can be useful to have a way to reset credentials after some time:
-#define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 50
+// Just put a high number or remove that part once it works stable
+#define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 256
 
 
 // E-ink SPI
@@ -55,6 +64,8 @@ uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
 // This is useful to see what device calls the image but also because CALE admin logs requests too just without IP
 #define ENABLE_INTERNAL_IP_LOG
 
+// Enables fast query to img.cale.es to check if the Eink has to refresh or not
+#define ENABLE_SERVICE_TIMES
 // ESP server will be online for: 
 #define SLEEP_AFTER_SECONDS 60 
 

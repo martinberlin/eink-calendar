@@ -13,8 +13,11 @@ Preferences preferences;
 #include <HTTPClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
-
 #include "BluetoothSerial.h"
+#include <TinyPICO.h>
+#ifdef TINYPICO
+  TinyPICO tp = TinyPICO();
+#endif
 // SerialBT class
 BluetoothSerial SerialBT;
 StaticJsonDocument<900> jsonBuffer;
@@ -462,9 +465,9 @@ if (bearer != "") {
     return;
   }
   // Parse BMP header
-  Serial.print("Searching for 0x4D42 start of BMP\n\n");
+  Serial.printf("Searching for 0x4D42 BMP. Free heap:%d\n", ESP.getFreeHeap());
   while (true) {
-    yield();
+    //yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
@@ -479,8 +482,10 @@ if (bearer != "") {
     uint32_t format = read32(client);
     uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
     Serial.printf("\n\nFile size: %d\n",fileSize); 
+    #ifdef DEBUG_MODE
     Serial.print("Image Offset: "); Serial.println(imageOffset);
     Serial.print("Header size: "); Serial.println(headerSize);
+    #endif
     Serial.print("Bit Depth: "); Serial.println(depth);
     Serial.printf("Resolution: %d x %d\n",width,height);
     
@@ -535,7 +540,7 @@ if (bearer != "") {
       for (uint16_t row = 0; row < h; row++, rowPosition += rowSize) // for each line
       {
         if (!connection_ok || !(client.connected() || client.available())) break;
-        delay(1); // yield() to avoid WDT
+        //delay(1); // yield() to avoid WDT
         uint32_t in_remain = rowSize;
         uint32_t in_idx = 0;
         uint32_t in_bytes = 0;
@@ -675,8 +680,8 @@ bool scanWiFi() {
 	WiFi.enableSTA(true);
 	WiFi.mode(WIFI_STA);
 
-	// Scan for AP
-	int apNum = WiFi.scanNetworks(false,true,false,1000);
+	// Scan for AP:   async , show_hidden WiFis, passive, max_mms
+	int apNum = WiFi.scanNetworks(false,false,false,1000);
 	if (apNum == 0) {
 		Serial.println("Found no networks.");
 		return false;
@@ -731,18 +736,19 @@ void gotIP(system_event_id_t event) {
   SerialBT.disconnect();
   SerialBT.end();
   Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
-
+  String payload = "1";
+#ifdef ENABLE_SERVICE_TIMES
   http.begin(screenUrl+"/st");
   int httpCode = http.GET();
   Serial.printf("Service times Response status:%d\n", httpCode);
-  String payload = "0";
+  
   if (httpCode > 0) { //Check for the returning code
       payload = http.getString();
       } else {
       Serial.println("Error on HTTP request");
     }
-  http.end(); 
-  
+  http.end();
+#endif
   // Read bitmap from web service: (bool with_color)
   if (payload == "1") {
     drawBitmapFrom_HTTP_ToBuffer(false);
@@ -786,14 +792,9 @@ void loop() {
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
   if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
-      #ifdef ESP32
         Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
         esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
         esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
-      #endif
   }
   secondsToDeepsleep++;
   delay(1000);
@@ -806,12 +807,14 @@ void resetPreferences() {
 }
 
 void setup() {
-
   Serial.begin(115200);
   #ifdef DEBUG_MODE
     display.init(115200);
   #else
     display.init();
+  #endif
+  #ifdef TINYPICO
+    tp.DotStar_SetPower(false);
   #endif
 
   Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
@@ -850,7 +853,7 @@ void setup() {
     screenUrl  = preferences.getString("screen_url","");
 		bearer     = preferences.getString("bearer","");
 		if (wifi_ssid1.equals("") || wifi_pass1.equals("")) {
-			Serial.println("Found preferences but credentials are invalid");
+			Serial.println("initBTSerial() Found preferences but credentials are invalid");
       initBTSerial();
 		} else {
 			Serial.println("Read from preferences:");
@@ -868,6 +871,7 @@ void setup() {
 	preferences.end();
 
 	if (hasCredentials) {
+    #ifdef WIFI_TWO_APS
 		// Enable this define WIFI_TWO_APS: If you want to set up 2 APs with ESP32WiFi BLE app
 		if (!scanWiFi()) {
         int secs = 5;
@@ -877,5 +881,9 @@ void setup() {
 		} else {
 			connectWiFi();
 		}
+    #else
+      connectWiFi();
+    #endif
   }
+  
 }
