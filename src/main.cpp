@@ -10,6 +10,7 @@
 #include <nvs_flash.h>
 Preferences preferences;
 #include <WiFiClient.h>
+#include <HTTPClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
 
@@ -88,8 +89,8 @@ uint64_t USEC = 1000000;
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
+HTTPClient http;   // Service times mini request
 
-WiFiClient client; // wifi client object
 
 char apName[] = "CALE-xxxxxxxxxxxx";
 bool usePrimAP = true;
@@ -386,6 +387,7 @@ bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *
 
 void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
+  WiFiClient client; // Wifi client object BMP request
   int millisIni = millis();
   int millisEnd = 0;
   bool connection_ok = false;
@@ -730,9 +732,23 @@ void gotIP(system_event_id_t event) {
   SerialBT.end();
   Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
 
+  http.begin(screenUrl+"/st");
+  int httpCode = http.GET();
+  Serial.printf("Service times Response status:%d\n", httpCode);
+  String payload = "0";
+  if (httpCode > 0) { //Check for the returning code
+      payload = http.getString();
+      } else {
+      Serial.println("Error on HTTP request");
+    }
+  http.end(); 
+  
   // Read bitmap from web service: (bool with_color)
-  drawBitmapFrom_HTTP_ToBuffer(false);
-
+  if (payload == "1") {
+    drawBitmapFrom_HTTP_ToBuffer(false);
+  } else {
+    Serial.println("Not in service time");
+  }
   if (isConnected) return;
 
   isConnected = true;
