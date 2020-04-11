@@ -10,10 +10,20 @@
 #include <nvs_flash.h>
 Preferences preferences;
 #include <WiFiClient.h>
-#include <SPI.h>
+#ifdef ENABLE_SERVICE_TIMES
+  #include <HTTPClient.h>
+  HTTPClient http;   // Service times mini request
+#endif
+
 #include <GxEPD.h>
 
 #include "BluetoothSerial.h"
+#include <TinyPICO.h>
+#ifdef TINYPICO
+  TinyPICO tp = TinyPICO();
+#endif
+
+WiFiClient client;
 // SerialBT class
 BluetoothSerial SerialBT;
 StaticJsonDocument<900> jsonBuffer;
@@ -89,8 +99,6 @@ uint64_t USEC = 1000000;
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
-
-WiFiClient client; // wifi client object
 
 char apName[] = "CALE-xxxxxxxxxxxx";
 bool usePrimAP = true;
@@ -392,54 +400,44 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   bool connection_ok = false;
   bool valid = false; // valid format to be handled
   bool flip = true; // bitmap is stored bottom-to-top
-  char *path;
+  uint32_t startTime = millis();
+  
+    char *path;
   char host[100];
   bool secure = true; // Default to secure
   unsigned hostlen = sizeof(host);
-
   if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
     Serial.println("Parsing error!");
     Serial.println(host);
     return;
   }
-char request[1999];
-strcpy(request, "POST ");
-strcat(request, path);
-strcat(request, " HTTP/1.1\r\n");
-strcat(request, "Host: ");
-strcat(request, host);
-strcat(request, "\r\n");
-
-if (bearer != "") {
-  strcat(request, "Authorization: Bearer ");strcat(request,bearer.c_str());strcat(request,"\r\n");
-}
+  String request;
+  request  = "POST " + String(path) + " HTTP/1.1\r\n";
+  request += "Host: " + String(host) + "\r\n";
+  if (bearer != "") {
+    request += "Authorization: Bearer "+bearer+ "\r\n";
+  }
 
 #ifdef ENABLE_INTERNAL_IP_LOG
-  char localIp[30];
-  String ip = WiFi.localIP().toString();
-  uint8_t ipLenght = ip.length()+3;
-  strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
-  strcat(request, "Content-Length: ");
-  char cLength[4];
-  itoa(ipLenght, cLength, 10);
-  strcat(request, cLength);
-  strcat(request, "\r\n\r\n");
-  strcat(request, "ip=");strcat(request, ip.c_str());
-  strcat(request, "\r\n");
+  String localIp = "ip="+WiFi.localIP().toString();
+  request += "Content-Type: application/x-www-form-urlencoded\r\n";
+  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
+  request += localIp +"\r\n";
 #endif
-
-  strcat(request, "\r\n");
-  if (debugMode) {
+  request += "\r\n";
+  #ifdef DEBUG_MODE
     Serial.println(request);
-  }
+  #endif
+
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
     Serial.println("connection failed");
     return;
   }
+  Serial.print("Requesting URL: ");
+  Serial.println(String(host) + String(path));
   client.connect(host, 80);
-
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -465,12 +463,11 @@ if (bearer != "") {
   // Parse BMP header
   Serial.print("Searching for 0x4D42 start of BMP\n\n");
   while (true) {
-    yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
     uint32_t fileSize = read32(client);
-    read32(client); // creatorBytes
+    uint32_t creatorBytes = read32(client);
     uint32_t imageOffset = read32(client); // Start of image data
     uint32_t headerSize = read32(client);
     uint32_t width  = read32(client);
@@ -651,7 +648,6 @@ if (bearer != "") {
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
-  Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
 }
 
 /**
@@ -732,6 +728,20 @@ void gotIP(system_event_id_t event) {
   SerialBT.disconnect();
   SerialBT.end();
   Serial.printf("SerialBT.end() freeHeap: %d\n", ESP.getFreeHeap());
+  String payload = "1";
+#ifdef ENABLE_SERVICE_TIMES
+  http.begin(screenUrl+"/st");
+  int httpCode = http.GET();
+  Serial.printf("Service times Response status:%d\n", httpCode);
+  
+  if (httpCode > 0) { //Check for the returning code
+      payload = http.getString();
+      } else {
+      Serial.println("Error on HTTP request");
+    }
+  http.end();
+  delay(100);
+#endif
   // Read bitmap from web service: (bool with_color)
   drawBitmapFrom_HTTP_ToBuffer(false);
 
