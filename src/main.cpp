@@ -18,6 +18,8 @@ Preferences preferences;
 #ifdef TINYPICO
   TinyPICO tp = TinyPICO();
 #endif
+float batteryVoltage = 0;
+
 // SerialBT class
 BluetoothSerial SerialBT;
 StaticJsonDocument<900> jsonBuffer;
@@ -122,7 +124,6 @@ void displayMessage(String message, int height) {
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(2, height);
   display.print(message);
-  //display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
   display.update(); // -> Since could not make partial updateWindow work
 }
 
@@ -646,6 +647,18 @@ if (bearer != "") {
     millisEnd = millis();
     Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+
+    // Battery partial update only on boards that support reading battery voltage
+    #ifdef TINYPICO
+      uint16_t box_x = display.width()-22;
+      uint16_t box_y = 1;
+      display.setFont(&FreeMono9pt7b);
+      display.setCursor(box_x, box_y);
+      display.print("  "+String(batteryVoltage));
+      // NOTE: Even setting the x to the display.width() - 22, did not margin to the right
+      Serial.printf("Attempt partial update. x: %d  y: %d", box_x, box_y);
+      display.updateWindow(box_x, box_y, 60, 10, true);
+    #endif
     break;
     }
   }
@@ -815,14 +828,17 @@ void setup() {
   Serial.begin(115200);
   #ifdef DEBUG_MODE
     display.init(115200);
+    Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
   #else
     display.init();
   #endif
+
   #ifdef TINYPICO
     tp.DotStar_SetPower(false);
+    batteryVoltage = tp.GetBatteryVoltage();
+    Serial.printf("TINYPICO version. Battery: %.6f v showing it on partial update\n", batteryVoltage);
   #endif
 
-  Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
   createName();
    
   display.setRotation(eink_rotation); // Rotates display N times clockwise
