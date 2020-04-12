@@ -11,7 +11,7 @@
 Preferences preferences;
 #include <WiFiClient.h>
 #include <HTTPClient.h>
-#include <SPI.h>
+
 #include <GxEPD.h>
 #include "BluetoothSerial.h"
 #include <TinyPICO.h>
@@ -406,35 +406,40 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     Serial.println(host);
     return;
   }
-char request[1999];
-strcpy(request, "POST ");
-strcat(request, path);
-strcat(request, " HTTP/1.1\r\n");
-strcat(request, "Host: ");
-strcat(request, host);
-strcat(request, "\r\n");
+char request[300];
+int rsize = sizeof(request);
+strlcpy(request, "POST "        , rsize);
+strlcat(request, path           , rsize);
+strlcat(request, " HTTP/1.1\r\n", rsize);
+strlcat(request, "Host: "       , rsize);
+strlcat(request, host           , rsize);
+strlcat(request, "\r\n"         , rsize);
 
 if (bearer != "") {
-  strcat(request, "Authorization: Bearer ");strcat(request,bearer.c_str());strcat(request,"\r\n");
+  strlcat(request, "Authorization: Bearer ", rsize);
+  strlcat(request, bearer.c_str(), rsize);
+  strlcat(request, "\r\n"        , rsize);
 }
 
 #ifdef ENABLE_INTERNAL_IP_LOG
-  char localIp[30];
   String ip = WiFi.localIP().toString();
   uint8_t ipLenght = ip.length()+3;
-  strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
-  strcat(request, "Content-Length: ");
+  strlcat(request, "Content-Type: application/x-www-form-urlencoded\r\n", rsize);
+  strlcat(request, "Content-Length: ", rsize);
   char cLength[4];
   itoa(ipLenght, cLength, 10);
-  strcat(request, cLength);
-  strcat(request, "\r\n\r\n");
-  strcat(request, "ip=");strcat(request, ip.c_str());
-  strcat(request, "\r\n");
+  strlcat(request, cLength    , rsize);
+  strlcat(request, "\r\n\r\n" , rsize);
+  strlcat(request, "ip="      , rsize);
+  strlcat(request, ip.c_str() , rsize);
+  strlcat(request, "\r\n"     , rsize);
 #endif
 
-  strcat(request, "\r\n");
+  strlcat(request, "\r\n"     , 2);
   #ifdef DEBUG_MODE
+    Serial.println("- - - - - - - - - ");
     Serial.println(request);
+    Serial.println("- - - - - - - - - ");
   #endif
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
