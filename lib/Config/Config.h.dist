@@ -1,36 +1,37 @@
 // Welcome to CALE branch: cale_ble  bluetooth version of the Firmware
+
+// NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
+// Your WiFi Credentials are not defined here, they are saved in Preferences and sent by bluetooth
+// --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
+
 #include <WString.h>
 
 // If you will use ESP32 tinypico.com uncomment to save power
 // #define TINYPICO
-
-// Uncomment to disable service times check against CALE (Prevents refreshes at night and weekends)
-#define ENABLE_SERVICE_TIMES
 
 // Comment to disable verbose mode both for main.cpp and gxEPD display library
 #define DEBUG_MODE
 // Uncomment if you just want to select between 2 WiFis (It works but probed to be less stable for me)
 // #define WIFI_TWO_APS
 
-// NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
-// --> https://cale.es <--  Get in CALE your JSON configuration to send per bluetooth
-
-// Your WiFi Credentials are not defined here, they are saved in Preferences and sent by bluetooth
-
 // Note this is mainly an internal debugging option for us. Can be useful to have a way to reset credentials after some time:
 // Just put a high number or remove that part once it works stable
 #define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 256
 
 
-// E-ink SPI
-// ESP8266          |  ESP32 GPIO in comments
-int8_t EINK_CS = 5;    // 5
-int8_t EINK_DC = 0;    // 17
-int8_t EINK_RST = 2;   // 16
-int8_t EINK_BUSY = 12; // 4
+// Uncomment to disable service times check against CALE (Prevents refreshes at night and weekends)
+#define ENABLE_SERVICE_TIMES
 
-// Sent to display.setRotation(eink_rotation) method in gxEPD
-int8_t eink_rotation = 0;
+// EINK Display configuration
+
+// SPI Gpios. Note that display SPI DIN -> MOSI (23) and display CLK -> CLK (18) those 2 Gpios are fixed in gxEPD so only this 4 are configurable:
+int8_t EINK_CS = 5;
+int8_t EINK_DC = 17;
+int8_t EINK_RST = 16;
+int8_t EINK_BUSY = 4;
+
+// Sent to display.setRotation(eink_rotation) method in gxEPD. Rotates 90*eink_rotation degrees
+int8_t eink_rotation = 0; 
 
 // SELECT YOUR E-INK Model uncommenting only one line  (For more info check https://github.com/ZinggJM/GxEPD#supported-spi-e-paper-panels-from-good-display )
 //#define GDEW042T2
@@ -57,22 +58,12 @@ int8_t eink_rotation = 0;
 
 // Deepsleep configuration
 #define DEEPSLEEP_ENABLED
-// Note: ESP8266 is not using this but 3 hrs fixed in the code since is the max time (search: 10800e6 in main.cpp)
 uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
 
-// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE 
 // This is useful to see what device calls the image but also because CALE admin logs requests too just without IP
+// Comment this if you are not interested in seeing the local IP of your ESP32 in CALE 
 #define ENABLE_INTERNAL_IP_LOG
 
 
 // ESP server will loop for this seconds (In case there is anything extra to do after rendering)
 #define SLEEP_AFTER_SECONDS 5 
-
-/* See Schematic. ESP8266 Ds to Gpios for Wemos D1 mini:
-CLK  = D8;
-DIN  = D7;
-BUSY = D6;
-CS   = D1; GPIO 5. IMPORTANT: Don't use D0 for Chip select since it can be used to wake up from deepsleep connected to RST
-DC   = D3;
-RST  = D4; 
-*/
