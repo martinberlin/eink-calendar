@@ -72,6 +72,9 @@ String bearer;
   #elif defined(GDEW075Z08)
   #include <GxGDEW075Z08/GxGDEW075Z08.h>
 #endif
+// Partial update coordinates
+uint16_t partialupdate_y = 0; 
+uint16_t partialupdate_x = 0;
 // Copied verbatim from gxEPD example (See platformio.ini)
 static const uint16_t input_buffer_pixels = 640; // may affect performance
 static const uint16_t max_palette_pixels = 256; // for depth <= 8
@@ -649,16 +652,16 @@ if (bearer != "") {
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
 
     // Battery partial update only on boards that support reading battery voltage
+    // Remove all this TINYPICO part if you don't want the battery level to be displayed with a partial update
     #ifdef TINYPICO
-      uint16_t box_x = display.width()-22;
-      uint16_t box_y = 1;
       display.setFont(&FreeMono9pt7b);
-      display.setCursor(box_x, box_y);
-      display.print("  "+String(batteryVoltage));
+      display.setCursor(partialupdate_x, partialupdate_y);
+      display.print("  "+String(batteryVoltage)+"v");
       // NOTE: Even setting the x to the display.width() - 22, did not margin to the right
-      Serial.printf("Attempt partial update. x: %d  y: %d", box_x, box_y);
-      display.updateWindow(box_x, box_y, 60, 10, true);
+      Serial.printf("Partial update. x: %d  y: %d\n", partialupdate_x, partialupdate_y);
+      display.updateWindow(partialupdate_x, partialupdate_y, 20, 10, true);
     #endif
+
     break;
     }
   }
@@ -832,7 +835,14 @@ void setup() {
   #else
     display.init();
   #endif
-
+  // Calculate bottom position for partial update. You may need to edit this to adjust to your display
+    if (eink_rotation == 0 || eink_rotation == 2) {
+      partialupdate_x = display.width()-20;
+      partialupdate_y = display.height()-25; // used for 7.5" 800x480
+    } else {
+      partialupdate_x = display.height()-20;
+      partialupdate_y = display.width()-20;
+    }
   #ifdef TINYPICO
     tp.DotStar_SetPower(false);
     batteryVoltage = tp.GetBatteryVoltage();

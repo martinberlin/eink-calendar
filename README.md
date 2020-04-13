@@ -32,8 +32,6 @@ We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https:
 
 In that branch we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
 
-For the rest of contents please refer to the master branch since it takes a long time to update the README files across branches and does not make too much sense.
-
 ### C configuration
 
 Just rename lib/Config/Config.h.dist to Config.h
