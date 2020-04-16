@@ -111,8 +111,8 @@ uint8_t lostConnectionCount = 1;
 /** SSIDs/Password of local WiFi networks */
 String wifi_ssid1;
 String wifi_pass1;
-String wifi_ssid2;
-String wifi_pass2;
+String wifi_ssid2 = "";
+String wifi_pass2 = "";
 
 void deleteWifiCredentials() {
 	Serial.println("Clearing saved WiFi credentials");
@@ -218,22 +218,22 @@ void readBTSerial() {
 	if (!error)
 	{
 		if (jsonBuffer.containsKey("wifi_ssid1") &&
-			jsonBuffer.containsKey("wifi_pass1") &&
-			jsonBuffer.containsKey("wifi_ssid2") &&
-			jsonBuffer.containsKey("wifi_pass2"))
+			jsonBuffer.containsKey("wifi_pass1"))
 		{
+      Preferences preferences;
+      preferences.begin("WiFiCred", false);
       bearer     = jsonBuffer["bearer"].as<String>();
       screenUrl  = jsonBuffer["screen_url"].as<String>();
 			wifi_ssid1 = jsonBuffer["wifi_ssid1"].as<String>();
 			wifi_pass1 = jsonBuffer["wifi_pass1"].as<String>();
-			wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
-			wifi_pass2 = jsonBuffer["wifi_pass2"].as<String>();
-			Preferences preferences;
-			preferences.begin("WiFiCred", false);
+      if (jsonBuffer.containsKey("wifi_ssid2")&&jsonBuffer.containsKey("wifi_pass2")) {
+			  wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
+			  wifi_pass2 = jsonBuffer["wifi_pass2"].as<String>();
+        preferences.putString("wifi_ssid2", wifi_ssid2);
+			  preferences.putString("wifi_pass2", wifi_pass2);
+      }
 			preferences.putString("wifi_ssid1", wifi_ssid1);
 			preferences.putString("wifi_pass1", wifi_pass1);
-      preferences.putString("wifi_ssid2", wifi_ssid2);
-			preferences.putString("wifi_pass2", wifi_pass2);
       preferences.putString("screen_url", screenUrl);
 			preferences.putString("bearer"    , bearer);
 			preferences.putBool("valid", true);
@@ -677,6 +677,15 @@ if (bearer != "") {
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
   Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
+
+  #ifdef DEEPSLEEP_ENABLED
+    if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
+          Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+          delay(500);
+          esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+          esp_deep_sleep_start();
+    }
+  #endif
 }
 
 /**
@@ -685,7 +694,7 @@ if (bearer != "") {
 	 and decides if a switch between
 	 allowed networks makes sense
 	 @return <code>bool</code>
-	        True if at least one allowed network was found
+  True if at least one allowed network was found
 */
 bool scanWiFi() {
 	/** RSSI for primary network */
@@ -772,7 +781,7 @@ void gotIP(system_event_id_t event) {
 #endif
   // Read bitmap from web service: (bool with_color)
   if (payload == "1") {
-    drawBitmapFrom_HTTP_ToBuffer(false);
+    drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
   } else {
     Serial.println("Not in service time");
   }
@@ -801,8 +810,12 @@ void connectWiFi() {
 		Serial.println(wifi_ssid1);
 		WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
 	} else {
-		Serial.println(wifi_ssid2);
-		WiFi.begin(wifi_ssid2.c_str(), wifi_pass2.c_str());
+    if (wifi_ssid2 != "") {
+      Serial.println(wifi_ssid2);
+      WiFi.begin(wifi_ssid2.c_str(), wifi_pass2.c_str());
+    } else {
+      Serial.println("wifi_ssid2 is not defined, please send it per Bluetooth to use 2 APs");
+    }
 	}
 }
 
@@ -810,17 +823,6 @@ void loop() {
   if (!isConnected) {
     readBTSerial();
   }
-  // Note: Enable deepsleep only as last step when all the rest is working as you expect
-#ifdef DEEPSLEEP_ENABLED
-  if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
-        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-        esp_deep_sleep_start();
-  }
-  secondsToDeepsleep++;
-  delay(1000);
-#endif
-
 }
 
 void resetPreferences() {

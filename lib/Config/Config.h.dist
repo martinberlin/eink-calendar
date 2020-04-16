@@ -23,6 +23,7 @@
 #define ENABLE_SERVICE_TIMES
 
 // EINK Display configuration
+#define EINK_HAS_COLOR false
 
 // SPI Gpios. Note that display SPI DIN -> MOSI (23) and display CLK -> CLK (18) those 2 Gpios are fixed in gxEPD so only this 4 are configurable:
 int8_t EINK_CS = 5;
