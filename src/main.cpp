@@ -475,6 +475,11 @@ if (bearer != "") {
   }
   // Parse BMP header
   Serial.printf("Searching for 0x4D42 BMP. Free heap:%d\n", ESP.getFreeHeap());
+  uint32_t format;
+  uint16_t depth;
+  uint32_t width;
+  uint32_t height;
+
   while (true) {
     //yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
@@ -484,19 +489,22 @@ if (bearer != "") {
     read32(client); // creatorBytes
     uint32_t imageOffset = read32(client); // Start of image data
     uint32_t headerSize = read32(client);
-    uint32_t width  = read32(client);
-    uint32_t height = read32(client);
+    width  = read32(client);
+    height = read32(client);
     uint16_t planes = read16(client);
-    uint16_t depth = read16(client); // bits per pixel
-    uint32_t format = read32(client);
+    depth = read16(client); // bits per pixel
+    format = read32(client);
     uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
     Serial.printf("\n\nFile size: %d\n",fileSize); 
     #ifdef DEBUG_MODE
     Serial.print("Image Offset: "); Serial.println(imageOffset);
     Serial.print("Header size: "); Serial.println(headerSize);
+    Serial.printf("Planes:%d ", planes);
+    Serial.printf("Bit Depth:%d ",depth);
     #endif
-    Serial.print("Bit Depth: "); Serial.println(depth);
-    Serial.printf("Resolution: %d x %d\n",width,height);
+    
+    Serial.printf("Format:%d (Valid is 0 or 3)\n", format);
+    Serial.printf("Resolution:%d x %d\n",width,height);
     
     if ((planes == 1) && ((format == 0) || (format == 3))) // uncompressed is handled, 565 also
     {
@@ -669,10 +677,18 @@ if (bearer != "") {
   
   if (!valid)
   {
-      display.setCursor(5, 20);
-      display.print("Unsupported image format");
-      display.setCursor(5, 40);
-      display.print("Compressed bmp are not handled");
+      char formatS[2];
+      char depthS[2];
+      char widthS[5];
+      char heightS[5];
+      itoa(format, formatS, 10);
+      itoa(depth, depthS, 10);
+      itoa(width, widthS, 10);
+      itoa(height, heightS, 10);
+      display.setFont(&FreeMono9pt7b);
+      display.setCursor(0, 20);
+      display.print("Unsupported image.\nFormat:"+String(formatS)+
+      " -> valid:0 or 3\nDepth:"+depthS+"\nResolution:"+widthS+" x "+heightS);
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
