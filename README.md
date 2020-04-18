@@ -4,95 +4,89 @@
 
 ### A very easy and straight-forward E-Ink calendar
 
+The Android app that sends the configuration to the ESP32 Firmware using Bluetooth is now oficially the default way to set up your display. But we will always keep the possibility to have also a version that uses a [hardcoded C configuration](https://github.com/martinberlin/eink-calendar/tree/cale) since there are many use cases where the user does not have Android, or just wants to have a configuration like this per se, keeping in mind that ESP8266 has no bluetooth.
+
 The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
 **cale_ble** Bluetooth research branch
 
-**Now what remains here in master is the version that will just do two things only:**
+### What the Firmware actually does
 
-1. Will connect to [cale.es](http://cale.es) and grab a dynamic rendered BMP
-2. Will go to sleep the amount of seconds defined in Config and return to point 1
+Only 4 things: 
 
-Please read the short instructions on [configuring the Firmware over Bluetooth](https://cale.es/firmware-bluetooth) to understand how it works.
+1. In case of no WiFi config, opens Bluetooth and waits for configuration, please send it [installing CALE Android app](https://play.google.com/store/apps/details?id=io.cordova.cale)
+2. Will connect to [cale.es](http://cale.es) and check receive a Service times response (0 or 1) 
+3. If the response is 1, then it will download a Screen bitmap image and render it in your E-ink, if not goes directly to point 4 and sleeps till next wake-up
+4. Will go to sleep the amount of seconds defined in Config and return to point 2. Only if wakes up and does not find a WiFi will return to 1
+
+Please read the short instructions on [configuring the Firmware over Bluetooth](https://cale.es/firmware-bluetooth) to understand how it works and get alternative links to download the Android app. If you don't use Android is no problem, just use the **cale branch** with [hardcoded C configuration](https://github.com/martinberlin/eink-calendar/tree/cale). 
 
 ### Our approach to make an easy E-Ink calendar
 
 - A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
-- The Firmware driving the Eink display will wake up every morning or every 2 hours and reads this screenshot. Then it will stay in deep sleep mode, consuming less than 1 miliamper from the battery, until it wakes up again and repeats the loop. 
+- The Firmware driving the Eink display will wake up every hour and reads this screenshot only if it's in the Service times you define in CALE (Ex. Mon->Fri from 6 to 18 hours). Then it will stay in deep sleep mode, consuming less than 1 miliamper from the battery, until it wakes up again and repeats the loop. 
 
 The goal is to build a dynamic calendar that is easy to install and has the lowest consumption as possible.
 We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https://www.tinypico.com) please check the branch: 
 **cale_tinypico**
 
-Where we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
+In that branch we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
 
-### Simple configuration
+### C configuration
 
 Just rename lib/Config/Config.h.dist to Config.h
-and fill it with your WiFi name and password.
 
+First of all configure what GPIOs go out from ESP32 to the Eink display:
+
+    // Example gpios Config for ESP32
+    int8_t EINK_CS = 5;
+    int8_t EINK_DC = 22;
+    int8_t EINK_RST = 21; 
+    int8_t EINK_BUSY = 4; 
+    // Keep in mind that this 2 important Gpios for SPI are not configurable
+    // Eink SPI DIN pin -> ESP32 MOSI  (23) 
+    // Eink SPI CLK pin -> ESP32 CLOCK (18)
+
+and then what Eink model you have uncommenting one of this lines:
+
+    #define GDEW075T7     // Waveshare 7.5" v2 800*480 -> ex. this gxEPD class will be used
+    //#define GDEW075T8   // Waveshare 7.5" v1 640*383
+    //#define GDEW075Z09   // 7.5" b/w/r 640x383
+    //#define GDEW075Z08   // 7.5" b/w/r 800x480
+    //#define GDE0213B1
+    //#define GDEW0154Z04 // Controller: IL0376F
+    //#define GDEW0154Z17   // 1.54" b/w
+    //#define GDE0213B1    // 2.13" b/w
+    //#define GDEH0213B72  // 2.13" b/w new panel
+    //#define GDEW0213Z16  // 2.13" b/w/r
+    //#define GDEH029A1    // 2.9" b/w
+    //#define GDEW029T5    // 2.9" b/w IL0373
+    //#define GDEW029Z10   // 2.9" b/w/r
+    //#define GDEW026T0    // 2.6" b/w
+    //#define GDEW027C44   // 2.7" b/w/r
+    //#define GDEW027W3    // 2.7" b/w
+    //#define GDEW0371W7   // 3.7" b/w
+    //#define GDEW042Z15   // 4.2" b/w/r
+
+If your class is not here, before giving up, please check if it's not in [gxEPD library](https://github.com/ZinggJM/GxEPD) and add it following our model in main.cpp 
+
+Deepsleep is one of the most important features to be able to have a display powered by 3.7v Lion batteries.
 If you want to enable deepsleep to power your calendar with batteries, then uncomment the line:
 
     //#define DEEPSLEEP_ENABLED
 
-Amount of seconds that the ESP32 is awake:
+Amount of seconds that the ESP32 will deepsleep:
+
+    uint64_t DEEPSLEEP_SECONDS = 3600*1;
+
+ This is useful in case you customize the firmware to do something more after rendering. Check loop() to see how is implemented:
 
     #define SLEEP_AFTER_SECONDS 20 
 
-Note that ESP8266 uses another function to deepsleep and has a maximum deepsleep time of about 3 hours:
+// When it reaches this number your credentials stored on Non-volatile storage on ESP32 processor are deleted
+// Put this to a high number after you get it working correctly:
+#define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 500
 
-    ESP.deepSleep(3600e6);  // 3600 = 1 hour in seconds
-
-**Most important part of the configuration:**
-
-    char screenUrl[] = "http://img.cale.es/bmp/USERNAME/SCREEN_ID";
-    
-    // Security setting, leave empty if your screen is publis
-    String bearer = "";
-
-Note that we don't recommend to use public screens since your calendar may contain private information like events, transfer or doctor appointments that you should not open to the world to see. So use always a security token.
-
-This token is sent in the headers like:
-
-Authorization: Bearer YOUR_TOKEN
-
-And passed to cale.es that verifies that your user owns this screen and also that the token matches the one that is stored on our servers.
-
-### Schematics
-
-![ESP8266 and SPI eink](screenshot/preview/Schematic_CALE_ESP8266.png)
-
-[Check more information and detailed schematics for the ESP32](https://cale.es/firmware)
-
-### Hardware requirements
-
-To build one of this you can start easy and get something that needs no soldiering at all and comes already wired in a single PCB with an ESP32 included. If you want to start easy like this our recommendation is to get a [Lilygo T5](https://cale.es/firmware-t5).
-Now if you want to have a big Epaper like 800x480 then you need to wire the E-Ink SPI to the ESP32 yourself. The [displays for CALE](https://cale.es/eink-displays) are all the Epaper displays that the Jean Marc Zingg gxEPD library supports.
-
-The most important asset to achieve low consumption and long battery life is that the ESP32 you use consumes less than 1 mA/hour in deepsleep mode. So after a successful build use your amperimeter to measure how much it consumes on the 3.3 v line. Do not measure it with a USB miliamperimeter since you won't get the real amperage that is consuming from the battery.
-
-#### ESP32 wiring suggestion
-
-Mapping suggestion for ESP32, e.g. LOLIN32:
-
-    This pins defined in lib/Config/Config.h
-    BUSY -> 4, RST -> 16, DC -> 17, CS -> SS(5)  
-
-    This ones are fixed
-    CLK -> SCK(18), DIN -> MOSI(23)
-
-### Build logs and detailed instructions
-
-[CALE in Hackaday](https://hackaday.io/project/169086-cale-low-energy-eink-wallpaper) Please follow the project there to get updates and more detailed build instructions
-
-[CALE Firmware](https://cale.es/firmware) Official page with more instructions and documentation
-
-### Roadmap 
-
-**Apr 2020** We are working on a cale-app (Android) so we can ship pre-assembled EInks with a case and battery. This will enable us to configure the device on the go and also to have a more friendly way of configuring the device and adjust some Firmware settings
-
-**Mar 2020** v1.0 of the CALE administrator is done and published. 20 users have registered, only 5 of them log in everyday and are requesting Bitmaps with their devices. Support is integrated now on the Admin, after login just go to:
-User -> Get support
 
 ### Support CALE
 

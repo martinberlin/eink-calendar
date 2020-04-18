@@ -10,20 +10,16 @@
 #include <nvs_flash.h>
 Preferences preferences;
 #include <WiFiClient.h>
-#ifdef ENABLE_SERVICE_TIMES
-  #include <HTTPClient.h>
-  HTTPClient http;   // Service times mini request
-#endif
+#include <HTTPClient.h>
 
 #include <GxEPD.h>
-
 #include "BluetoothSerial.h"
 #include <TinyPICO.h>
 #ifdef TINYPICO
   TinyPICO tp = TinyPICO();
 #endif
+float batteryVoltage = 0;
 
-WiFiClient client;
 // SerialBT class
 BluetoothSerial SerialBT;
 StaticJsonDocument<900> jsonBuffer;
@@ -76,6 +72,9 @@ String bearer;
   #elif defined(GDEW075Z08)
   #include <GxGDEW075Z08/GxGDEW075Z08.h>
 #endif
+// Partial update coordinates
+uint16_t partialupdate_y = 0; 
+uint16_t partialupdate_x = 0;
 // Copied verbatim from gxEPD example (See platformio.ini)
 static const uint16_t input_buffer_pixels = 640; // may affect performance
 static const uint16_t max_palette_pixels = 256; // for depth <= 8
@@ -90,7 +89,6 @@ uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for dept
 //Converting fonts with ümlauts: ./fontconvert *.ttf 18 32 252
 #include <Fonts/FreeMono9pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
-bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
@@ -99,6 +97,7 @@ uint64_t USEC = 1000000;
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
 // (GxIO& io, uint8_t rst = D4, uint8_t busy = D2);
 GxEPD_Class display(io, EINK_RST, EINK_BUSY );
+HTTPClient http;   // Service times mini request
 
 char apName[] = "CALE-xxxxxxxxxxxx";
 bool usePrimAP = true;
@@ -111,8 +110,8 @@ uint8_t lostConnectionCount = 1;
 /** SSIDs/Password of local WiFi networks */
 String wifi_ssid1;
 String wifi_pass1;
-String wifi_ssid2;
-String wifi_pass2;
+String wifi_ssid2 = "";
+String wifi_pass2 = "";
 
 void deleteWifiCredentials() {
 	Serial.println("Clearing saved WiFi credentials");
@@ -127,7 +126,6 @@ void displayMessage(String message, int height) {
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(2, height);
   display.print(message);
-  //display.updateWindow(0,0,display.width(),height, true); // Attempt partial update
   display.update(); // -> Since could not make partial updateWindow work
 }
 
@@ -219,22 +217,22 @@ void readBTSerial() {
 	if (!error)
 	{
 		if (jsonBuffer.containsKey("wifi_ssid1") &&
-			jsonBuffer.containsKey("wifi_pass1") &&
-			jsonBuffer.containsKey("wifi_ssid2") &&
-			jsonBuffer.containsKey("wifi_pass2"))
+			jsonBuffer.containsKey("wifi_pass1"))
 		{
+      Preferences preferences;
+      preferences.begin("WiFiCred", false);
       bearer     = jsonBuffer["bearer"].as<String>();
       screenUrl  = jsonBuffer["screen_url"].as<String>();
 			wifi_ssid1 = jsonBuffer["wifi_ssid1"].as<String>();
 			wifi_pass1 = jsonBuffer["wifi_pass1"].as<String>();
-			wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
-			wifi_pass2 = jsonBuffer["wifi_pass2"].as<String>();
-			Preferences preferences;
-			preferences.begin("WiFiCred", false);
+      if (jsonBuffer.containsKey("wifi_ssid2")&&jsonBuffer.containsKey("wifi_pass2")) {
+			  wifi_ssid2 = jsonBuffer["wifi_ssid2"].as<String>();
+			  wifi_pass2 = jsonBuffer["wifi_pass2"].as<String>();
+        preferences.putString("wifi_ssid2", wifi_ssid2);
+			  preferences.putString("wifi_pass2", wifi_pass2);
+      }
 			preferences.putString("wifi_ssid1", wifi_ssid1);
 			preferences.putString("wifi_pass1", wifi_pass1);
-      preferences.putString("wifi_ssid2", wifi_ssid2);
-			preferences.putString("wifi_pass2", wifi_pass2);
       preferences.putString("screen_url", screenUrl);
 			preferences.putString("bearer"    , bearer);
 			preferences.putBool("valid", true);
@@ -317,9 +315,9 @@ uint16_t read16bmp(WiFiClient& client)
   uint16_t result;
   ((uint8_t *)&result)[0] = client.read(); // LSB
   ((uint8_t *)&result)[1] = client.read(); // MSB
-  if (debugMode) {
+  #ifdef DEBUG_MODE
     Serial.print(result,HEX); Serial.print(" ");
-  } 
+  #endif
   return result;
 }
 
@@ -395,6 +393,7 @@ bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *
 
 void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
+  WiFiClient client; // Wifi client object BMP request
   int millisIni = millis();
   int millisEnd = 0;
   bool connection_ok = false;
@@ -411,33 +410,47 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     Serial.println(host);
     return;
   }
-  String request;
-  request  = "POST " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(host) + "\r\n";
-  if (bearer != "") {
-    request += "Authorization: Bearer "+bearer+ "\r\n";
-  }
+char request[300];
+int rsize = sizeof(request);
+strlcpy(request, "POST "        , rsize);
+strlcat(request, path           , rsize);
+strlcat(request, " HTTP/1.1\r\n", rsize);
+strlcat(request, "Host: "       , rsize);
+strlcat(request, host           , rsize);
+strlcat(request, "\r\n"         , rsize);
+
+if (bearer != "") {
+  strlcat(request, "Authorization: Bearer ", rsize);
+  strlcat(request, bearer.c_str(), rsize);
+  strlcat(request, "\r\n"        , rsize);
+}
 
 #ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+WiFi.localIP().toString();
-  request += "Content-Type: application/x-www-form-urlencoded\r\n";
-  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
-  request += localIp +"\r\n";
+  String ip = WiFi.localIP().toString();
+  uint8_t ipLenght = ip.length()+3;
+  strlcat(request, "Content-Type: application/x-www-form-urlencoded\r\n", rsize);
+  strlcat(request, "Content-Length: ", rsize);
+  char cLength[4];
+  itoa(ipLenght, cLength, 10);
+  strlcat(request, cLength    , rsize);
+  strlcat(request, "\r\n\r\n" , rsize);
+  strlcat(request, "ip="      , rsize);
+  strlcat(request, ip.c_str() , rsize);
+  strlcat(request, "\r\n"     , rsize);
 #endif
-  request += "\r\n";
-  #ifdef DEBUG_MODE
-    Serial.println(request);
-  #endif
 
+  strlcat(request, "\r\n"     , 2);
+  #ifdef DEBUG_MODE
+    Serial.println("- - - - - - - - - ");
+    Serial.println(request);
+    Serial.println("- - - - - - - - - ");
+  #endif
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
     Serial.println("connection failed");
     return;
   }
-  Serial.print("Requesting URL: ");
-  Serial.println(String(host) + String(path));
-  client.connect(host, 80);
   client.print(request); //send the http request to the server
   client.flush();
   display.fillScreen(GxEPD_WHITE);
@@ -461,8 +474,14 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     return;
   }
   // Parse BMP header
-  Serial.print("Searching for 0x4D42 start of BMP\n\n");
+  Serial.printf("Searching for 0x4D42 BMP. Free heap:%d\n", ESP.getFreeHeap());
+  uint32_t format;
+  uint16_t depth;
+  uint32_t width;
+  uint32_t height;
+
   while (true) {
+    //yield();
   if (read16bmp(client) == 0x4D42) // BMP signature
   {
     int millisBmp = millis();
@@ -470,17 +489,22 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     uint32_t creatorBytes = read32(client);
     uint32_t imageOffset = read32(client); // Start of image data
     uint32_t headerSize = read32(client);
-    uint32_t width  = read32(client);
-    uint32_t height = read32(client);
+    width  = read32(client);
+    height = read32(client);
     uint16_t planes = read16(client);
-    uint16_t depth = read16(client); // bits per pixel
-    uint32_t format = read32(client);
+    depth = read16(client); // bits per pixel
+    format = read32(client);
     uint32_t bytes_read = 7 * 4 + 3 * 2; // read so far
     Serial.printf("\n\nFile size: %d\n",fileSize); 
+    #ifdef DEBUG_MODE
     Serial.print("Image Offset: "); Serial.println(imageOffset);
     Serial.print("Header size: "); Serial.println(headerSize);
-    Serial.print("Bit Depth: "); Serial.println(depth);
-    Serial.printf("Resolution: %d x %d\n",width,height);
+    Serial.printf("Planes:%d ", planes);
+    Serial.printf("Bit Depth:%d ",depth);
+    #endif
+    
+    Serial.printf("Compression:%d (Valid:0 or 3)\n", format);
+    Serial.printf("Resolution:%d x %d\n",width,height);
     
     if ((planes == 1) && ((format == 0) || (format == 3))) // uncompressed is handled, 565 also
     {
@@ -533,7 +557,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
       for (uint16_t row = 0; row < h; row++, rowPosition += rowSize) // for each line
       {
         if (!connection_ok || !(client.connected() || client.available())) break;
-        delay(1); // yield() to avoid WDT
+        //delay(1); // yield() to avoid WDT
         uint32_t in_remain = rowSize;
         uint32_t in_idx = 0;
         uint32_t in_bytes = 0;
@@ -634,6 +658,18 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     millisEnd = millis();
     Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+
+    // Battery partial update only on boards that support reading battery voltage
+    // Remove all this TINYPICO part if you don't want the battery level to be displayed with a partial update
+    #ifdef TINYPICO
+      display.setFont(&FreeMono9pt7b);
+      display.setCursor(partialupdate_x, partialupdate_y);
+      display.print("  "+String(batteryVoltage)+"v");
+      // NOTE: Even setting the x to the display.width() - 22, did not margin to the right
+      Serial.printf("Partial update. x: %d  y: %d\n", partialupdate_x, partialupdate_y);
+      display.updateWindow(partialupdate_x, partialupdate_y, 20, 10, true);
+    #endif
+
     break;
     }
   }
@@ -641,13 +677,44 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   
   if (!valid)
   {
-      display.setCursor(5, 20);
-      display.print("Unsupported image format");
-      display.setCursor(5, 40);
-      display.print("Compressed bmp are not handled");
+    String compressionFormat;
+    switch(format) {
+      case 0:
+        compressionFormat = "none";
+        break;
+      case 1:
+        compressionFormat = "RLE 8-bit/pixel";
+        break;
+      case 2:
+        compressionFormat = "RLE 4-bit/pixel";
+        break;
+      case 3:
+        compressionFormat = "BI_BITFIELDS 565";
+      default:
+        compressionFormat = "unsupported";
+    }
+      char formatS[2];
+      char depthS[2];
+      char widthS[5];
+      char heightS[5];
+      itoa(format, formatS, 10);
+      itoa(depth, depthS, 10);
+      itoa(width, widthS, 10);
+      itoa(height, heightS, 10);
+      display.setFont(&FreeMono9pt7b);
+      display.setCursor(0, 20);
+      display.print("Unsupported compressed\nimage.Compression:"+String(formatS)+
+      "\n>valid:0 or 3\n"+compressionFormat+"\nDepth:"+depthS+"\nResolution:"+widthS+" x "+heightS);
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
+  Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
+
+  #ifdef DEEPSLEEP_ENABLED
+          Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+          esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+          esp_deep_sleep_start();
+  #endif
 }
 
 /**
@@ -656,7 +723,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 	 and decides if a switch between
 	 allowed networks makes sense
 	 @return <code>bool</code>
-	        True if at least one allowed network was found
+  True if at least one allowed network was found
 */
 bool scanWiFi() {
 	/** RSSI for primary network */
@@ -672,8 +739,8 @@ bool scanWiFi() {
 	WiFi.enableSTA(true);
 	WiFi.mode(WIFI_STA);
 
-	// Scan for AP
-	int apNum = WiFi.scanNetworks(false,true,false,1000);
+	// Scan for AP:   async , show_hidden WiFis, passive, max_mms
+	int apNum = WiFi.scanNetworks(false,false,false,1000);
 	if (apNum == 0) {
 		Serial.println("Found no networks.");
 		return false;
@@ -740,11 +807,13 @@ void gotIP(system_event_id_t event) {
       Serial.println("Error on HTTP request");
     }
   http.end();
-  delay(100);
 #endif
   // Read bitmap from web service: (bool with_color)
-  drawBitmapFrom_HTTP_ToBuffer(false);
-
+  if (payload == "1") {
+    drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
+  } else {
+    Serial.println("Not in service time");
+  }
   if (isConnected) return;
 
   isConnected = true;
@@ -770,8 +839,12 @@ void connectWiFi() {
 		Serial.println(wifi_ssid1);
 		WiFi.begin(wifi_ssid1.c_str(), wifi_pass1.c_str());
 	} else {
-		Serial.println(wifi_ssid2);
-		WiFi.begin(wifi_ssid2.c_str(), wifi_pass2.c_str());
+    if (wifi_ssid2 != "") {
+      Serial.println(wifi_ssid2);
+      WiFi.begin(wifi_ssid2.c_str(), wifi_pass2.c_str());
+    } else {
+      Serial.println("wifi_ssid2 is not defined, please send it per Bluetooth to use 2 APs");
+    }
 	}
 }
 
@@ -779,22 +852,6 @@ void loop() {
   if (!isConnected) {
     readBTSerial();
   }
-  // Note: Enable deepsleep only as last step when all the rest is working as you expect
-#ifdef DEEPSLEEP_ENABLED
-  if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
-      #ifdef ESP32
-        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
-      #endif
-  }
-  secondsToDeepsleep++;
-  delay(1000);
-#endif
-
 }
 
 void resetPreferences() {
@@ -802,15 +859,27 @@ void resetPreferences() {
 }
 
 void setup() {
-
   Serial.begin(115200);
-  if (debugMode) {
+  #ifdef DEBUG_MODE
     display.init(115200);
-  } else {
+    Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
+  #else
     display.init();
-  }
+  #endif
+  // Calculate bottom position for partial update. You may need to edit this to adjust to your display
+    if (eink_rotation == 0 || eink_rotation == 2) {
+      partialupdate_x = display.width()-20;
+      partialupdate_y = display.height()-25; // used for 7.5" 800x480
+    } else {
+      partialupdate_x = display.height()-20;
+      partialupdate_y = display.width()-20;
+    }
+  #ifdef TINYPICO
+    tp.DotStar_SetPower(false);
+    batteryVoltage = tp.GetBatteryVoltage();
+    Serial.printf("TINYPICO version. Battery: %.6f v showing it on partial update\n", batteryVoltage);
+  #endif
 
-  Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
   createName();
    
   display.setRotation(eink_rotation); // Rotates display N times clockwise
@@ -846,7 +915,7 @@ void setup() {
     screenUrl  = preferences.getString("screen_url","");
 		bearer     = preferences.getString("bearer","");
 		if (wifi_ssid1.equals("") || wifi_pass1.equals("")) {
-			Serial.println("Found preferences but credentials are invalid");
+			Serial.println("initBTSerial() Found preferences but credentials are invalid");
       initBTSerial();
 		} else {
 			Serial.println("Read from preferences:");
@@ -864,6 +933,7 @@ void setup() {
 	preferences.end();
 
 	if (hasCredentials) {
+    #ifdef WIFI_TWO_APS
 		// Enable this define WIFI_TWO_APS: If you want to set up 2 APs with ESP32WiFi BLE app
 		if (!scanWiFi()) {
         int secs = 5;
@@ -873,5 +943,9 @@ void setup() {
 		} else {
 			connectWiFi();
 		}
+    #else
+      connectWiFi();
+    #endif
   }
+  
 }
