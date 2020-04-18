@@ -503,7 +503,7 @@ if (bearer != "") {
     Serial.printf("Bit Depth:%d ",depth);
     #endif
     
-    Serial.printf("Format:%d (Valid is 0 or 3)\n", format);
+    Serial.printf("Compression:%d (Valid:0 or 3)\n", format);
     Serial.printf("Resolution:%d x %d\n",width,height);
     
     if ((planes == 1) && ((format == 0) || (format == 3))) // uncompressed is handled, 565 also
@@ -711,12 +711,9 @@ if (bearer != "") {
   Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
 
   #ifdef DEEPSLEEP_ENABLED
-    if (isConnected && secondsToDeepsleep>SLEEP_AFTER_SECONDS+14) {
           Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-          delay(500);
           esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
           esp_deep_sleep_start();
-    }
   #endif
 }
 
