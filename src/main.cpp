@@ -677,6 +677,22 @@ if (bearer != "") {
   
   if (!valid)
   {
+    String compressionFormat;
+    switch(format) {
+      case 0:
+        compressionFormat = "none";
+        break;
+      case 1:
+        compressionFormat = "RLE 8-bit/pixel";
+        break;
+      case 2:
+        compressionFormat = "RLE 4-bit/pixel";
+        break;
+      case 3:
+        compressionFormat = "BI_BITFIELDS 565";
+      default:
+        compressionFormat = "unsupported";
+    }
       char formatS[2];
       char depthS[2];
       char widthS[5];
@@ -687,8 +703,8 @@ if (bearer != "") {
       itoa(height, heightS, 10);
       display.setFont(&FreeMono9pt7b);
       display.setCursor(0, 20);
-      display.print("Unsupported image.\nFormat:"+String(formatS)+
-      " -> valid:0 or 3\nDepth:"+depthS+"\nResolution:"+widthS+" x "+heightS);
+      display.print("Unsupported compressed\nimage.Compression:"+String(formatS)+
+      "\n>valid:0 or 3\n"+compressionFormat+"\nDepth:"+depthS+"\nResolution:"+widthS+" x "+heightS);
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
