@@ -1,217 +1,217 @@
-#include <Config.h>
+#include <FS.h>
 
 #ifdef ESP32
-  #include <WiFi.h>
-  #include <ESPmDNS.h>
-#elif ESP8266
-  #include <ESP8266WiFi.h>
-  #include <ESP8266mDNS.h>
-  #include <DNSServer.h>
+  #include "SPIFFS.h" // ESP32 only
 #endif
-#include <WiFiClient.h>
+
 // JPEG decoder library
 #include <JPEGDecoder.h>
-#include <TFT_eSPI.h>
 
-TFT_eSPI tft = TFT_eSPI();
+#include <TFT_eSPI.h>      // Hardware-specific library
 
-uint8_t u8cursor = 10;
-bool debugMode = false;
+TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
 
-unsigned int secondsToDeepsleep = 0;
-uint64_t USEC = 1000000;
-WiFiClient client; // wifi client object
+#include <SPI.h>
 
+void loop(){
 
-uint16_t read16()
-{
-  // BMP data is stored little-endian, same as Arduino.
-  uint16_t result;
-  ((uint8_t *)&result)[0] = client.read(); // LSB
-  ((uint8_t *)&result)[1] = client.read(); // MSB
-  //Serial.print(result, HEX);
-  return result;
 }
 
-uint32_t read32()
-{
-  // BMP data is stored little-endian, same as Arduino.
-  uint32_t result;
-  ((uint8_t *)&result)[0] = client.read(); // LSB
-  ((uint8_t *)&result)[1] = client.read();
-  ((uint8_t *)&result)[2] = client.read();
-  ((uint8_t *)&result)[3] = client.read(); // MSB
-  return result;
-}
+#define minimum(a,b)     (((a) < (b)) ? (a) : (b))
 
-bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len, bool *secure){
-  if(url==NULL){
-    return false;
-  }
-  char *host_start = NULL;
-  bool path_resolved = false;
-  unsigned hostname_length = 0;
-  for(unsigned i = 0; i < strlen(url); i++){
-    switch (url[i])
+
+//====================================================================================
+//   Decode and render the Jpeg image onto the TFT screen
+//====================================================================================
+void jpegRender(int xpos, int ypos) {
+
+  // retrieve infomration about the image
+  uint16_t  *pImg;
+  int16_t mcu_w = JpegDec.MCUWidth;
+  int16_t mcu_h = JpegDec.MCUHeight;
+  int32_t max_x = JpegDec.width;
+  int32_t max_y = JpegDec.height;
+
+  // Jpeg images are draw as a set of image block (tiles) called Minimum Coding Units (MCUs)
+  // Typically these MCUs are 16x16 pixel blocks
+  // Determine the width and height of the right and bottom edge image blocks
+  int32_t min_w = minimum(mcu_w, max_x % mcu_w);
+  int32_t min_h = minimum(mcu_h, max_y % mcu_h);
+
+  // save the current image block size
+  int32_t win_w = mcu_w;
+  int32_t win_h = mcu_h;
+
+  // record the current time so we can measure how long it takes to draw an image
+  uint32_t drawTime = millis();
+
+  // save the coordinate of the right and bottom edges to assist image cropping
+  // to the screen size
+  max_x += xpos;
+  max_y += ypos;
+
+  // read each MCU block until there are no more
+  while ( JpegDec.readSwappedBytes()) { // Swapped byte order read
+
+    // save a pointer to the image block
+    pImg = JpegDec.pImage;
+
+    // calculate where the image block should be drawn on the screen
+    int mcu_x = JpegDec.MCUx * mcu_w + xpos;  // Calculate coordinates of top left corner of current MCU
+    int mcu_y = JpegDec.MCUy * mcu_h + ypos;
+
+    // check if the image block size needs to be changed for the right edge
+    if (mcu_x + mcu_w <= max_x) win_w = mcu_w;
+    else win_w = min_w;
+
+    // check if the image block size needs to be changed for the bottom edge
+    if (mcu_y + mcu_h <= max_y) win_h = mcu_h;
+    else win_h = min_h;
+
+    // copy pixels into a contiguous block
+    if (win_w != mcu_w)
     {
-    case ':':
-      if (i < 7) // If we find : past the 7th position, we know it's probably a port number
-      { // This is to handle "http" or "https" in front of URL
-        if (secure!=NULL&&i == 4)
-        {
-          *secure = false;
-        }
-        else if(secure!=NULL)
-        {
-          *secure = true;
-        }
-        i = i + 2; // Move our cursor out of the schema into the domain
-        host_start = &url[i+1];
-        hostname_length = 0;
-        continue;
+      for (int h = 1; h < win_h-1; h++)
+      {
+        memcpy(pImg + h * win_w, pImg + (h + 1) * mcu_w, win_w << 1);
       }
-      break;
-    case '/': // We know if we skipped the schema, than the first / will be the start of the path
-      *path = &url[i];
-      path_resolved = true;
-      break;
     }
-    if(path_resolved){
-      break;
+
+    // draw image MCU block only if it will fit on the screen
+    if ( mcu_x < tft.width() && mcu_y < tft.height())
+    {
+      // Now push the image block to the screen
+      tft.pushImage(mcu_x, mcu_y, win_w, win_h, pImg);
     }
-    ++hostname_length;
+
+    else if ( ( mcu_y + win_h) >= tft.height()) JpegDec.abort();
+
   }
-  if(host_start!=NULL&&*path!=NULL&&*host_len>hostname_length){
-    memcpy(host, host_start, hostname_length);
-    host[hostname_length] = NULL;
-    if(path_resolved){
-      return true;
-    }
-  }
-  return false;
+
+  // calculate how long it took to draw the image
+  drawTime = millis() - drawTime; // Calculate the time it took
+
+  // print the results to the serial port
+  Serial.print  ("Total render time was    : "); Serial.print(drawTime); Serial.println(" ms");
+  Serial.println("=====================================");
+
 }
 
-/**
- * Convert the internal IP to string
- */
-String IpAddress2String(const IPAddress& ipAddress)
-{
-  return String(ipAddress[0]) + String(".") +\
-  String(ipAddress[1]) + String(".") +\
-  String(ipAddress[2]) + String(".") +\
-  String(ipAddress[3]);
+//====================================================================================
+//   Print information decoded from the Jpeg image
+//====================================================================================
+void jpegInfo() {
+
+  Serial.println("===============");
+  Serial.println("JPEG image info");
+  Serial.println("===============");
+  Serial.print  ("Width      :"); Serial.println(JpegDec.width);
+  Serial.print  ("Height     :"); Serial.println(JpegDec.height);
+  Serial.print  ("Components :"); Serial.println(JpegDec.comps);
+  Serial.print  ("MCU / row  :"); Serial.println(JpegDec.MCUSPerRow);
+  Serial.print  ("MCU / col  :"); Serial.println(JpegDec.MCUSPerCol);
+  Serial.print  ("Scan type  :"); Serial.println(JpegDec.scanType);
+  Serial.print  ("MCU width  :"); Serial.println(JpegDec.MCUWidth);
+  Serial.print  ("MCU height :"); Serial.println(JpegDec.MCUHeight);
+  Serial.println("===============");
+  Serial.println("");
 }
 
+//====================================================================================
+//   Open a Jpeg file and send it to the Serial port in a C array compatible format
+//====================================================================================
+void createArray(const char *filename) {
 
-void handleWebToDisplay() {
-  int millisIni = millis();
-  char *path;
-  char host[100];
-  bool secure = true; // Default to secure
-  unsigned hostlen = sizeof(host);
-  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
-    Serial.println("Parsing error!");
-    Serial.println(host);
+  // Open the named file
+  fs::File jpgFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
+  //  File jpgFile = SD.open( filename, FILE_READ);  // or, file handle reference for SD library
+
+  if ( !jpgFile ) {
+    Serial.print("ERROR: File \""); Serial.print(filename); Serial.println ("\" not found!");
     return;
   }
-  String request;
-  request  = "POST " + String(path) + " HTTP/1.1\r\n";
-  request += "Host: " + String(host) + "\r\n";
-  if (bearer != "") {
-    request += "Authorization: Bearer "+bearer+ "\r\n";
-  }
 
-#ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+IpAddress2String(WiFi.localIP());
-  request += "Content-Type: application/x-www-form-urlencoded\r\n";
-  request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
-  request += localIp +"\r\n";
-#endif
-  request += "\r\n";
-  if (debugMode) {
-    Serial.println(request);
-  }
+  uint8_t data;
+  byte line_len = 0;
+  Serial.println("");
+  Serial.println("// Generated by a JPEGDecoder library example sketch:");
+  Serial.println("// https://github.com/Bodmer/JPEGDecoder");
+  Serial.println("");
+  Serial.println("#if defined(__AVR__)");
+  Serial.println("  #include <avr/pgmspace.h>");
+  Serial.println("#endif");
+  Serial.println("");
+  Serial.print  ("const uint8_t ");
+  while (*filename != '.') Serial.print(*filename++);
+  Serial.println("[] PROGMEM = {"); // PROGMEM added for AVR processors, it is ignored by Due
 
-  client.connect(host, 80);
-  client.print(request); //send the http request to the server
-  client.flush();
+  while ( jpgFile.available()) {
 
-  unsigned long timeout = millis();
-  while (client.available() == 0) {
-    if (millis() - timeout > 5000) {
-      Serial.println(">>> Client Timeout !");
-      client.stop();
-      return;
+    data = jpgFile.read();
+    Serial.print("0x"); if (abs(data) < 16) Serial.print("0");
+    Serial.print(data, HEX); Serial.print(",");// Add value and comma
+    line_len++;
+    if ( line_len >= 32) {
+      line_len = 0;
+      Serial.println();
     }
+
   }
-  // Read image and dump it on the TFT 
+
+  Serial.println("};\r\n");
+  jpgFile.close();
+}
+
+//====================================================================================
+//   Opens the image file and prime the Jpeg decoder
+//====================================================================================
+void drawJpeg(const char *filename, int xpos, int ypos) {
+
+  Serial.println("===========================");
+  Serial.print("Drawing file: "); Serial.println(filename);
+  Serial.println("===========================");
+
+  // Open the named file (the Jpeg decoder library will close it after rendering image)
+  fs::File jpegFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
+  //  File jpegFile = SD.open( filename, FILE_READ);  // or, file handle reference for SD library
+
+  //ESP32 always seems to return 1 for jpegFile so this null trap does not work
+  if ( !jpegFile ) {
+    Serial.print("ERROR: File \""); Serial.print(filename); Serial.println ("\" not found!");
+    return;
+  }
+
+  // Use one of the three following methods to initialise the decoder,
+  // the filename can be a String or character array type:
+
+  //boolean decoded = JpegDec.decodeFsFile(jpegFile); // Pass a SPIFFS file handle to the decoder,
+  //boolean decoded = JpegDec.decodeSdFile(jpegFile); // or pass the SD file handle to the decoder,
+  boolean decoded = JpegDec.decodeFsFile(filename);  // or pass the filename (leading / distinguishes SPIFFS files)
+
+  if (decoded) {
+    // print information about the image to the serial port
+    jpegInfo();
+
+    // render the image onto the screen at given coordinates
+    jpegRender(xpos, ypos);
+  }
+  else {
+    Serial.println("Jpeg file format not supported!");
+  }
+}
+
+
+void setup(void) {
   
-// Start reading bits
-while (client.available()) {
-    yield();
-  }     
-}
-
-
-void loop() {
-
-  // Note: Enable deepsleep only as last step when all the rest is working as you expect
-#ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      delay(10);
-      #ifdef ESP32
-        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
-      #endif
-  }
-  secondsToDeepsleep++;
-  delay(1000);
-#endif
-
-}
-
-void setup() {
-  Serial.begin(115200);
-  delay(100);
-  Serial.print("MOSI:");Serial.println(TFT_MOSI);
-
   tft.begin();
-  tft.setRotation(2);  // 0 & 2 Portrait. 1 & 3 landscape
+  tft.setRotation(0);  // 0 & 2 Portrait. 1 & 3 landscape
   tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_GREENYELLOW);
-  tft.setCursor(0, u8cursor);
-  tft.print("Connecting to WiFi");
-  tft.setTextColor(TFT_BLUE);
 
-  uint8_t connectTries = 0;
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<6) {
-    Serial.print(" .");
-    delay(500);
-    connectTries++;
+  if (!SPIFFS.begin()) {
+    Serial.println("SPIFFS initialisation failed!");
+    while (1) yield(); // Stay here twiddling thumbs waiting
   }
 
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("ONLINE");
-    Serial.println(WiFi.localIP());
-    delay(999);
-    handleWebToDisplay();
-  } else {
-    // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
-    //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
-    int secs = 10;
-    
-      #ifdef ESP32
-        Serial.printf("Going to sleep %d seconds\n", secs);
-        esp_sleep_enable_timer_wakeup(secs * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(1800e6);
-      #endif
-      }
+    drawJpeg("/monkey.jpg", 0 , 0);     // 240 x 320 image
+  
 }
