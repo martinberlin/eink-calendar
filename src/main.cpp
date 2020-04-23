@@ -1,24 +1,19 @@
+#include <Config.h>
 #include <FS.h>
-
-#ifdef ESP32
-  #include "SPIFFS.h" // ESP32 only
-#endif
-
-// JPEG decoder library
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include "SPIFFS.h" // ESP32 only
 #include <JPEGDecoder.h>
-
 #include <TFT_eSPI.h>      // Hardware-specific library
-
 TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
-
 #include <SPI.h>
+#define JPEG_BUFFER 50000
 
-void loop(){
+uint64_t USEC = 1000000;
 
-}
+uint8_t lostConnectionCount = 0;
 
 #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
-
 
 //====================================================================================
 //   Decode and render the Jpeg image onto the TFT screen
@@ -200,18 +195,188 @@ void drawJpeg(const char *filename, int xpos, int ypos) {
   }
 }
 
+bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *host_len, bool *secure){
+  if(screen_uri==""){
+    Serial.println("screen_uri is empty at parsePathInformation()");
+    return false;
+  }
+  char *host_start = NULL;
+  bool path_resolved = false;
+  unsigned hostname_length = 0;
+  
+  char *url = (char *)screen_uri.c_str();
+  for(unsigned i = 0; i < strlen(url); i++){
+    switch (url[i])
+    {
+    case ':':
+      if (i < 7) // If we find : past the 7th position, we know it's probably a port number
+      { // This is to handle "http" or "https" in front of URL
+        if (secure!=NULL&&i == 4)
+        {
+          *secure = false;
+        }
+        else if(secure!=NULL)
+        {
+          *secure = true;
+        }
+        i = i + 2; // Move our cursor out of the schema into the domain
+        host_start = &url[i+1];
+        hostname_length = 0;
+        continue;
+      }
+      break;
+    case '/': // We know if we skipped the schema, than the first / will be the start of the path
+      *path = &url[i];
+      path_resolved = true;
+      break;
+    }
+    if(path_resolved){
+      break;
+    }
+    ++hostname_length;
+  }
+  if(host_start!=NULL&&*path!=NULL&&*host_len>hostname_length){
+    memcpy(host, host_start, hostname_length);
+    host[hostname_length] = NULL;
+    if(path_resolved){
+      return true;
+    }
+  }
+  return false;
+}
+
+void downloadJpeg()
+{
+  WiFiClient client; // Wifi client object BMP request
+  int millisIni = millis();
+  int millisEnd = 0;
+  bool connection_ok = false;
+  bool valid = false; // valid format to be handled
+  
+  char *path;
+  char host[100];
+  bool secure = true; // Default to secure
+  unsigned hostlen = sizeof(host);
+
+  if(!parsePathInformation(screenUrl, &path, host, &hostlen, &secure)){
+    Serial.println("Parsing error!");
+    Serial.println(host);
+    return;
+  }
+
+char request[300];
+int rsize = sizeof(request);
+strlcpy(request, "POST "        , rsize);
+strlcat(request, path           , rsize);
+strlcat(request, " HTTP/1.1\r\n", rsize);
+strlcat(request, "Host: "       , rsize);
+strlcat(request, host           , rsize);
+strlcat(request, "\r\n"         , rsize);
+
+if (bearer != "") {
+  strlcat(request, "Authorization: Bearer ", rsize);
+  strlcat(request, bearer.c_str(), rsize);
+  strlcat(request, "\r\n"        , rsize);
+}
+
+#ifdef ENABLE_INTERNAL_IP_LOG
+  String ip = WiFi.localIP().toString();
+  uint8_t ipLenght = ip.length()+3;
+  strlcat(request, "Content-Type: application/x-www-form-urlencoded\r\n", rsize);
+  strlcat(request, "Content-Length: ", rsize);
+  char cLength[4];
+  itoa(ipLenght, cLength, 10);
+  strlcat(request, cLength    , rsize);
+  strlcat(request, "\r\n\r\n" , rsize);
+  strlcat(request, "ip="      , rsize);
+  strlcat(request, ip.c_str() , rsize);
+  strlcat(request, "\r\n"     , rsize);
+#endif
+
+  strlcat(request, "\r\n"     , 2);
+  #ifdef DEBUG_MODE
+    Serial.println("- - - - - - - - - ");
+    Serial.println(request);
+    Serial.println("- - - - - - - - - ");
+  #endif
+  Serial.print("connecting to "); Serial.println(host);
+  if (!client.connect(host, 80))
+  {
+    Serial.println("connection failed");
+    return;
+  }
+  client.print(request); //send the http request to the server
+  client.flush();
+
+  while (client.connected())
+  {
+    String line = client.readStringUntil('\n');
+    if (!connection_ok)
+    {
+      connection_ok = line.startsWith("HTTP/1.1 200 OK");
+      if (connection_ok) Serial.println(line);
+    }
+    if (line == "\r")
+    {
+      Serial.println("headers received");
+      break;
+    }
+  }
+  
+
+  uint8_t *jpegBuffer = new uint8_t[JPEG_BUFFER];
+  uint32_t c = 0;
+  while (client.available()) {
+     jpegBuffer[c] = client.read();
+     c++;
+  }
+  
+  bool decoded = JpegDec.decodeArray(jpegBuffer,c);
+
+    if (decoded) {
+    jpegInfo();
+    jpegRender(0, 0);
+  }
+  else {
+    Serial.println("Jpeg file format not supported!");
+  }
+
+}
+
+/** Callback for receiving IP address from AP */
+void gotIP(system_event_id_t event) {
+  Serial.println("gotIP: Download image & Render the display");
+  downloadJpeg();
+}
+
+/** Callback for connection loss */
+void lostCon(system_event_id_t event) {
+    ++lostConnectionCount;
+    Serial.printf("WiFi lost connection try %d to connect again\n", lostConnectionCount);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
+void loop(){
+
+}
 
 void setup(void) {
-  
+  Serial.begin(115200);
+
   tft.begin();
-  tft.setRotation(0);  // 0 & 2 Portrait. 1 & 3 landscape
-  tft.fillScreen(TFT_BLACK);
+  tft.setRotation(DISPLAY_ROTATION);  
+  tft.fillScreen(TFT_WHITE);
 
   if (!SPIFFS.begin()) {
     Serial.println("SPIFFS initialisation failed!");
-    while (1) yield(); // Stay here twiddling thumbs waiting
   }
 
-    drawJpeg("/monkey.jpg", 0 , 0);     // 240 x 320 image
-  
+  // SPIFFS test: 
+  //drawJpeg("/monkey.jpg", 0 , 0);
+  uint8_t connectTries = 0;
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  	// Setup callback function for successful connection
+	WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
+	// Setup callback function for lost connection
+	WiFi.onEvent(lostCon, SYSTEM_EVENT_STA_DISCONNECTED);
 }
