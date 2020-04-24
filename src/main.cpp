@@ -326,9 +326,17 @@ if (bearer != "") {
 
   uint8_t *jpegBuffer = new uint8_t[JPEG_BUFFER];
   uint32_t c = 0;
-  while (client.available()) {
+  uint8_t clientNotAvailCount = 0;
+
+  while (clientNotAvailCount<3) {
+    if (client.available()) {
      jpegBuffer[c] = client.read();
+     } else {
+       delay(1);
+       ++clientNotAvailCount;
+     }
      c++;
+     yield();
   }
   
   bool decoded = JpegDec.decodeArray(jpegBuffer,c);
@@ -336,6 +344,7 @@ if (bearer != "") {
     if (decoded) {
     jpegInfo();
     jpegRender(0, 0);
+    Serial.printf("%d bytes read from cale.es\n", c);
   }
   else {
     Serial.println("Jpeg file format not supported!");
