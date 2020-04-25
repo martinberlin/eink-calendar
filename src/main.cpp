@@ -39,6 +39,8 @@ String bearer;
   #include <GxGDEW0154Z04/GxGDEW0154Z04.h> // Controller IL0376F
   #elif defined(GDEW0154Z17)
   #include <GxGDEW0154Z17/GxGDEW0154Z17.h> // Controller IL0373
+  #elif defined(GDEP0154H)
+  #include <GxGDEP0154H/GxGDEP0154H.h> // Controller IL0373 HELTEC
   #elif defined(GDEW0213I5F)
   #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
   #elif defined(GDE0213B1)
@@ -862,6 +864,7 @@ void setup() {
   Serial.begin(115200);
   #ifdef DEBUG_MODE
     display.init(115200);
+    display.eraseDisplay();
     Serial.printf("setup() freeHeap after display.init() %d\n", ESP.getFreeHeap());
   #else
     display.init();
