@@ -2,6 +2,7 @@
 #include <string>
 // Please note this version is only ESP32
 #include <WiFi.h>
+#include <Wire.h>
 #include <ESPmDNS.h>
 // Bluetooth arsenal:
 #include <ArduinoJson.h>
