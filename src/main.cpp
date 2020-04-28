@@ -12,6 +12,7 @@ Preferences preferences;
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 
+#include <Wire.h> // Not using this but Adafruit GFX needs it
 #include <GxEPD.h>
 #include "BluetoothSerial.h"
 #include <TinyPICO.h>
@@ -341,6 +342,12 @@ uint32_t read32(WiFiClient& client)
   ((uint8_t *)&result)[2] = client.read();
   ((uint8_t *)&result)[3] = client.read(); // MSB
   return result;
+}
+
+void espDeepsleep() {
+  Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+  esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+  esp_deep_sleep_start();
 }
 
 bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *host_len, bool *secure){
@@ -712,11 +719,7 @@ if (bearer != "") {
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
   Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
 
-  #ifdef DEEPSLEEP_ENABLED
-          Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-          esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-          esp_deep_sleep_start();
-  #endif
+  espDeepsleep();
 }
 
 /**
@@ -815,6 +818,7 @@ void gotIP(system_event_id_t event) {
     drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
   } else {
     Serial.println("Not in service time");
+    espDeepsleep();
   }
   if (isConnected) return;
 
