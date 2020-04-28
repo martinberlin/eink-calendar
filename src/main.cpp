@@ -302,6 +302,7 @@ if (bearer != "") {
   Serial.print("connecting to "); Serial.println(host);
   if (!client.connect(host, 80))
   {
+    tft.println("Connection timeout. Check your internet connection");
     Serial.println("connection failed");
     return;
   }
@@ -363,6 +364,9 @@ void lostCon(system_event_id_t event) {
     ++lostConnectionCount;
     Serial.printf("WiFi lost connection try %d to connect again\n", lostConnectionCount);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
+    if (lostConnectionCount==4) {
+      tft.println("Cannot connect to the internet. Check your Config.h credentials");
+    }
 }
 
 void loop(){
@@ -380,8 +384,9 @@ void setup(void) {
     Serial.println("SPIFFS initialisation failed!");
   }
 
-  // SPIFFS test: 
-  //drawJpeg("/monkey.jpg", 0 , 0);
+  // SPIFFS test. Uncomment this first after doing: pio run --target uploadfs
+  // To make sure an image from the SPIFFS renders in your display:
+  // drawJpeg("/monkey.jpg", 0 , 0);return;
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   	// Setup callback function for successful connection
