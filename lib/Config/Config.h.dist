@@ -58,7 +58,6 @@ int8_t eink_rotation = 0;
 //#define GDEW075Z08   // 7.5" b/w/r 800x480
 
 // Deepsleep configuration
-#define DEEPSLEEP_ENABLED
 uint64_t DEEPSLEEP_SECONDS = 3600*3; // Example: 3 Hours
 
 // This is useful to see what device calls the image but also because CALE admin logs requests too just without IP

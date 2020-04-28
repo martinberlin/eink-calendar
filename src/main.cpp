@@ -710,20 +710,13 @@ if (bearer != "") {
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
   Serial.printf("freeHeap after display render: %d\n", ESP.getFreeHeap());
-
-  #ifdef DEEPSLEEP_ENABLED
-          Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-          esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-          esp_deep_sleep_start();
-  #endif
+  Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+  esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+  esp_deep_sleep_start();
 }
 
 /**
-	 scanWiFi
-	 Scans for available networks 
-	 and decides if a switch between
-	 allowed networks makes sense
-	 @return <code>bool</code>
+	Scans for available networks and decides if a switch between allowed networks makes sense
   True if at least one allowed network was found
 */
 bool scanWiFi() {
@@ -814,9 +807,13 @@ void gotIP(system_event_id_t event) {
     drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
   } else {
     Serial.println("Not in service time");
+    
+    Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
+    esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
+    esp_deep_sleep_start();
   }
-  if (isConnected) return;
 
+  if (isConnected) return;
   isConnected = true;
 	connStatusChanged = true;
 
