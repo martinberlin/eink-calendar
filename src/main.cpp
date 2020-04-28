@@ -328,7 +328,7 @@ if (bearer != "") {
   uint32_t c = 0;
   uint8_t clientNotAvailCount = 0;
 
-  while (clientNotAvailCount<3) {
+  while (clientNotAvailCount<7) {
     if (client.available()) {
      jpegBuffer[c] = client.read();
      } else {
