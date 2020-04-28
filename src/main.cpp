@@ -245,6 +245,12 @@ bool parsePathInformation(String screen_uri, char **path, char *host, unsigned *
   return false;
 }
 
+void progressBar(long processed, long total)
+{
+  int percentage = round(processed * tft.width() / total);
+  tft.fillRect(0, 1, percentage, 4, TFT_RED);
+}
+
 void downloadJpeg()
 {
   WiFiClient client; // Wifi client object BMP request
@@ -308,14 +314,20 @@ if (bearer != "") {
   }
   client.print(request); //send the http request to the server
   client.flush();
+  uint32_t imgLength = 0;
 
   while (client.connected())
   {
     String line = client.readStringUntil('\n');
+    Serial.println(line);
+    if (line.startsWith("Content-Length:")) { //16
+      String contentLength = line.substring(16,line.length());
+      imgLength = contentLength.toInt();
+    }
+
     if (!connection_ok)
     {
       connection_ok = line.startsWith("HTTP/1.1 200 OK");
-      if (connection_ok) Serial.println(line);
     }
     if (line == "\r")
     {
@@ -324,20 +336,20 @@ if (bearer != "") {
     }
   }
   
+  Serial.printf("Image length: %d bytes\n", imgLength);
 
   uint8_t *jpegBuffer = new uint8_t[JPEG_BUFFER];
-  uint32_t c = 0;
-  uint8_t clientNotAvailCount = 0;
+  uint32_t c = 1;
 
-  while (clientNotAvailCount<7) {
+  while (c <= imgLength) {
     if (client.available()) {
      jpegBuffer[c] = client.read();
-     } else {
-       delay(1);
-       ++clientNotAvailCount;
-     }
      c++;
-     yield();
+     // Remove this fancy loading bar if you want to make it faster
+     if (c%10 == 0) {
+      progressBar(c, imgLength);
+     }
+     }
   }
   
   bool decoded = JpegDec.decodeArray(jpegBuffer,c);
