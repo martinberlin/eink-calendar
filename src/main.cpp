@@ -437,10 +437,9 @@ if (bearer != "") {
   strlcat(request, "\r\n\r\n" , rsize);
   strlcat(request, "ip="      , rsize);
   strlcat(request, ip.c_str() , rsize);
-  strlcat(request, "\r\n"     , rsize);
 #endif
 
-  strlcat(request, "\r\n"     , 2);
+  strlcat(request, "\r\n\r\n" , rsize);
   #ifdef DEBUG_MODE
     Serial.println("- - - - - - - - - ");
     Serial.println(request);
