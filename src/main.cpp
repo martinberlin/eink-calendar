@@ -257,7 +257,6 @@ void downloadJpeg()
   int millisIni = millis();
   int millisEnd = 0;
   bool connection_ok = false;
-  bool valid = false; // valid format to be handled
   
   char *path;
   char host[100];
@@ -342,6 +341,7 @@ if (bearer != "") {
   uint32_t c = 1;
 
   while (c <= imgLength) {
+    yield();
     if (client.available()) {
      jpegBuffer[c] = client.read();
      c++;
@@ -349,10 +349,16 @@ if (bearer != "") {
      if (c%10 == 0) {
       progressBar(c, imgLength);
      }
+     } else {
+       delay(1);
      }
   }
+  millisEnd = millis();
+  Serial.printf("JPG download: %d ms\n", millisEnd-millisIni);  
   
   bool decoded = JpegDec.decodeArray(jpegBuffer,c);
+  
+  Serial.printf("JPG decoding: %d ms\n", millis()-millisEnd);  
 
     if (decoded) {
     jpegInfo();
@@ -399,7 +405,7 @@ void setup(void) {
   // SPIFFS test. Uncomment this first after doing: pio run --target uploadfs
   // To make sure an image from the SPIFFS renders in your display:
   // drawJpeg("/monkey.jpg", 0 , 0);return;
-  uint8_t connectTries = 0;
+
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   	// Setup callback function for successful connection
 	WiFi.onEvent(gotIP, SYSTEM_EVENT_STA_GOT_IP);
