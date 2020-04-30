@@ -354,8 +354,9 @@ if (bearer != "") {
      }
   }
   millisEnd = millis();
+  Serial.printf("JPG buffer size: %d ms\n", c);  
   Serial.printf("JPG download: %d ms\n", millisEnd-millisIni);  
-  
+
   bool decoded = JpegDec.decodeArray(jpegBuffer,c);
   
   Serial.printf("JPG decoding: %d ms\n", millis()-millisEnd);  
