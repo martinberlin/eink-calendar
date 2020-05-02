@@ -8,14 +8,26 @@ The Android app that sends the configuration to the ESP32 Firmware using Bluetoo
 
 The original version and hackaday project is moved to the [legacy branch](https://github.com/martinberlin/eink-calendar/tree/legacy)
 
-**cale_ble** Bluetooth research branch
+#### Branch reference
+
+**cale** Use this branch is you need to use ESP8266 as the display controller (No bluetooth, config is hardcoded in Config.h)
+
+**cale_tft** Version only as a working demo for TFT displays
+
+**cale_t5** T5 & T5S are small 2.13 or 2.7 inches ESP32 small Epaper displays from TTGO
+
+**cale_ble** Bluetooth research branch (beta)
+
+**cale_spi_config** Version uses a GxEPD fork that enables you to define in platformio.ini what pins you want to use for SPI communication
+
+Any other branch is internal for us and will probably be deleted in the future. 
 
 ### What the Firmware actually does
 
 Only 4 things: 
 
 1. In case of no WiFi config, opens Bluetooth and waits for configuration, please send it [installing CALE Android app](https://play.google.com/store/apps/details?id=io.cordova.cale)
-2. Will connect to [cale.es](http://cale.es) and check receive a Service times response (0 or 1) 
+2. Will connect to [cale.es](http://cale.es) and query Service times (That responds with a boolean response: 0 or 1) 
 3. If the response is 1, then it will download a Screen bitmap image and render it in your E-ink, if not goes directly to point 4 and sleeps till next wake-up
 4. Will go to sleep the amount of seconds defined in Config and return to point 2. Only if wakes up and does not find a WiFi will return to 1
 
@@ -23,14 +35,17 @@ Please read the short instructions on [configuring the Firmware over Bluetooth](
 
 ### Our approach to make an easy E-Ink calendar
 
-- A screenshot to BMP endpoint that prints a webpage with the contents you need displayed on Eink (This does for you CALE)
+- A screenshot to BMP endpoint that prints a webpage with the contents of your Screen (This does for you CALE)
 - The Firmware driving the Eink display will wake up every hour and reads this screenshot only if it's in the Service times you define in CALE (Ex. Mon->Fri from 6 to 18 hours). Then it will stay in deep sleep mode, consuming less than 1 miliamper from the battery, until it wakes up again and repeats the loop. 
 
 The goal is to build a dynamic calendar that is easy to install and has the lowest consumption as possible.
-We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https://www.tinypico.com) please check the branch: 
-**cale_tinypico**
+We could reach a minimum consumption of 0.08 mA/hr using ESP32 [Tinypico](https://www.tinypico.com) please uncomment the Config.h if you use one:
 
-In that branch we implemented the TinyPICO helper library to shut down the DotStar Led and the data lines to reduce the consumption to the minimum. Currently this was is lowest consumption record we could achieve with an ESP32.
+    // #define TINYPICO
+
+We highly recomment to use TinyPICO or a similar ESP32 board that allows having a deepsleep consumption of 0.1 mA or less if you want your battery powered display to work for long without being recharged.
+We don't provide any lifetime estimations since everyone can decide how often it refreshes and what battery to use, but we expect that even refreshing many times a day, will stand at least 1 month working with a fully charged 2000 mA/hr 3.7 Lion battery.
+Our goal is to build a product that can do it's job and stay out of the way, that needs no mainteinance and has a large battery lifespan.
 
 ### C configuration
 
