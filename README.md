@@ -85,22 +85,10 @@ and then what Eink model you have uncommenting one of this lines:
 
 If your class is not here, before giving up, please check if it's not in [gxEPD library](https://github.com/ZinggJM/GxEPD) and add it following our model in main.cpp 
 
-Deepsleep is one of the most important features to be able to have a display powered by 3.7v Lion batteries.
-If you want to enable deepsleep to power your calendar with batteries, then uncomment the line:
-
-    //#define DEEPSLEEP_ENABLED
 
 Amount of seconds that the ESP32 will deepsleep:
 
     uint64_t DEEPSLEEP_SECONDS = 3600*1;
-
- This is useful in case you customize the firmware to do something more after rendering. Check loop() to see how is implemented:
-
-    #define SLEEP_AFTER_SECONDS 20 
-
-// When it reaches this number your credentials stored on Non-volatile storage on ESP32 processor are deleted
-// Put this to a high number after you get it working correctly:
-#define RESTART_TIMES_BEFORE_CREDENTIALS_RESET 500
 
 
 ### Support CALE

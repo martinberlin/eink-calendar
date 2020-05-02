@@ -897,11 +897,13 @@ void setup() {
   counter++;
   preferences.putUInt("counter", counter);
   Serial.printf("ESP32 has restarted %d times\n", counter);
+  /*
   if (counter > RESTART_TIMES_BEFORE_CREDENTIALS_RESET) {
     Serial.println("Resetting Credentials");
     // Comment if you don't want to let the counter delete your credentials
     resetPreferences(); 
   }
+  */
   
 	bool hasPref = preferences.getBool("valid", false);
 	if (hasPref) {
