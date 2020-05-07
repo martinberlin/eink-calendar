@@ -9,13 +9,12 @@
 #include <Preferences.h>
 #include <nvs.h>
 #include <nvs_flash.h>
-Preferences preferences;
-#include <WiFiClient.h>
 #include <HTTPClient.h>
-
 #include <GxEPD.h>
 #include "BluetoothSerial.h"
 #include <TinyPICO.h>
+
+Preferences preferences;
 #ifdef TINYPICO
   TinyPICO tp = TinyPICO();
 #endif

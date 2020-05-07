@@ -1,4 +1,5 @@
-// Welcome to CALE branch: cale_ble  bluetooth version of the Firmware
+// Welcome to CALE master branch: Bluetooth configurable version
+// Android App: https://play.google.com/store/apps/details?id=io.cordova.cale
 
 // NOTE: In the bluetooth version screenUrl & bearer come in the JSON you copy and send to the Firmware so they are not anymore defined here
 // Your WiFi Credentials are not defined here, they are saved in Preferences and sent by bluetooth
