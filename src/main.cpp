@@ -1,11 +1,15 @@
 #include <Config.h>
+
 #ifdef ESP32
+  #include <HTTPClient.h>
   #include <WiFi.h>
   #include <ESPmDNS.h>
 #elif ESP8266
+  #include <ESP8266HTTPClient.h>
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
   #include <DNSServer.h>
+  
 #endif
 #include <WiFiClient.h>
 #include <SPI.h>
@@ -481,14 +485,8 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   } 
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
-}
 
-void loop() {
-
-  // Note: Enable deepsleep only as last step when all the rest is working as you expect
-#ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
-      display.powerDown();
+        display.powerDown();
       delay(10);
       #ifdef ESP32
         Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
@@ -498,11 +496,10 @@ void loop() {
         Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
         ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
       #endif
-  }
-  secondsToDeepsleep++;
-  delay(1000);
-#endif
+}
 
+void loop() {
+  delay(1);
 }
 
 void setup() {
@@ -529,8 +526,29 @@ void setup() {
 
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("ONLINE");
     Serial.println(WiFi.localIP());
+ 
+    #ifdef ENABLE_SERVICE_TIMES
+      HTTPClient http;   // Service times mini request
+      String payload = "1";
+      int urlSize = sizeof(screenUrl)+4;
+      char stRequest[urlSize];
+      strcpy(stRequest, screenUrl);
+      strlcat(stRequest, "/st", urlSize);
+      Serial.print("Service times:");
+      Serial.println(stRequest);
+
+      http.begin(stRequest);
+      int httpCode = http.GET();
+      Serial.printf("Service times Response status:%d\n", httpCode);
+      
+      if (httpCode > 0) { //Check for the returning code
+          payload = http.getString();
+          } else {
+          Serial.println("Error on HTTP request");
+        }
+      http.end();
+#endif
     
    //New function that reads the URL from config:
    drawBitmapFrom_HTTP_ToBuffer(false);
@@ -546,7 +564,7 @@ void setup() {
         esp_deep_sleep_start();
       #elif ESP8266
         Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(1800e6);
+        ESP.deepSleep(3600e6);
       #endif
       }
 }

@@ -6,6 +6,9 @@ char screenUrl[] = "http://img.cale.es/bmp/USERNAME/ID";
 // Private Screen Token. Leave as "" if the screen is public
 String bearer="";
 
+// This enables checking Service times so it does not render at night
+#define ENABLE_SERVICE_TIMES
+
 // Your WiFi Credentials
 #define WIFI_SSID "Your WiFi Name"
 #define WIFI_PASS ""
