@@ -34,8 +34,6 @@
   #include <GxGDE0213B1/GxGDE0213B1.h>
   #elif defined(GDEH0213B72)
   #include <GxGDEH0213B72/GxGDEH0213B72.h>
-  #elif defined(GDEH0213B73)
-  #include <GxGDEH0213B73/GxGDEH0213B73.h>
   #elif defined(GDEW0213Z16)
   #include <GxGDEW0213Z16/GxGDEW0213Z16.h>
   #elif defined(GDEH029A1)
