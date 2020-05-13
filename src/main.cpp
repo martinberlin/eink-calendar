@@ -516,7 +516,7 @@ void setup() {
   
   uint8_t connectTries = 0;
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED && connectTries<3) {
+  while (WiFi.status() != WL_CONNECTED && connectTries<9) {
     Serial.print(" .");
     delay(500);
     connectTries++;
