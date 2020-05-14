@@ -549,14 +549,14 @@ void setup() {
 #endif
     
    //New function that reads the URL from config:
-   drawBitmapFrom_HTTP_ToBuffer(false);
+   drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
-    int secs = 1;
     display.powerDown();
 
       #ifdef ESP32
+        int secs = 1;
         Serial.printf("Going to sleep %d seconds\n", secs);
         esp_sleep_enable_timer_wakeup(secs * USEC);
         esp_deep_sleep_start();

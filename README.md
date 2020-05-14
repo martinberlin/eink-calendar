@@ -31,9 +31,6 @@ If you want to enable deepsleep to power your calendar with batteries, then unco
 
     //#define DEEPSLEEP_ENABLED
 
-Amount of seconds that the ESP32 is awake:
-
-    #define SLEEP_AFTER_SECONDS 20 
 
 Note that ESP8266 uses another function to deepsleep and has a maximum deepsleep time of about 3 hours:
 
@@ -46,7 +43,13 @@ Note that ESP8266 uses another function to deepsleep and has a maximum deepsleep
     // Security setting, leave empty if your screen is publis
     String bearer = "";
 
-Note that we don't recommend to use public screens since your calendar may contain private information like events, transfer or doctor appointments that you should not open to the world to see. So use always a security token.
+**EPAPER MODEL** Please make sure to uncomment only one of the GxEPD classes. And only use: 
+
+    #define EINK_HAS_COLOR true
+
+If your Epaper model supports colors. Color is a tricky thing, since red should be sent pure red, otherwise the BMP to Buffer function will not really get it right. And also on CALE backend site, making multiple color, will get out the 4 bits range and default to 24 bits which can make a astonishing 6 times bigger downlad compared with 4 bits.
+
+**Security and privacy:** Please note that we don't recommend to use public screens since your calendar may contain private information like events, transfer or doctor appointments that you should not open to the world to see. So use always a security token.
 
 This token is sent in the headers like:
 
