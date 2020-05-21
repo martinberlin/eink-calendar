@@ -500,6 +500,17 @@ void loop() {
   delay(1);
 }
 
+void espSleep(int secs) {
+  #ifdef ESP32
+    Serial.printf("Going to sleep %d seconds\n", secs);
+    esp_sleep_enable_timer_wakeup(secs * USEC);
+    esp_deep_sleep_start();
+  #elif ESP8266
+    Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+    ESP.deepSleep(1800e6);
+  #endif
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -526,6 +537,8 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(WiFi.localIP());
  
+   bool isOnServiceTime = true;
+
     #ifdef ENABLE_SERVICE_TIMES
       HTTPClient http;   // Service times mini request
       String payload = "1";
@@ -542,27 +555,30 @@ void setup() {
       
       if (httpCode > 0) { //Check for the returning code
           payload = http.getString();
+          Serial.println("Service Times: "+payload);
+          if (payload == "0") {
+            isOnServiceTime = false;
+          }
           } else {
           Serial.println("Error on HTTP request");
         }
       http.end();
-#endif
+    #endif
     
-   //New function that reads the URL from config:
-   drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
+    // true if ENABLE_SERVICE_TIMES is disabled
+  if (isOnServiceTime) {
+   
+      drawBitmapFrom_HTTP_ToBuffer(EINK_HAS_COLOR);
+
+   } else {
+      display.powerDown();
+      espSleep(3600);
+   }
+
   } else {
     // There is no WiFi or can't connect. After getting this to work leave this at least in 600 seconds so it will retry in 10 minutes so 
     //                                    if your WiFi is temporarily down the system will not drain your battery in a loop trying to connect.
     display.powerDown();
-
-      #ifdef ESP32
-        int secs = 1;
-        Serial.printf("Going to sleep %d seconds\n", secs);
-        esp_sleep_enable_timer_wakeup(secs * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(3600e6);
-      #endif
+    espSleep(1800);
       }
 }
