@@ -1,11 +1,14 @@
 #include <Config.h>
 #include <Wire.h>
+char version[13] = "CALE v1.0.1";
 
 #ifdef ESP32
+  char firmware[40] = " Framework:arduino ESP32";
   #include <HTTPClient.h>
   #include <WiFi.h>
   #include <ESPmDNS.h>
 #elif ESP8266
+  char firmware[40] = " framework:arduino ESP8266";
   #include <ESP8266HTTPClient.h>
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
@@ -73,6 +76,7 @@ bool debugMode = true;
 
 unsigned int secondsToDeepsleep = 0;
 uint64_t USEC = 1000000;
+char newline[2] = "\n";
 
 // SPI interface GPIOs defined in Config.h  
 GxIO_Class io(SPI, EINK_CS, EINK_DC, EINK_RST);
@@ -512,10 +516,16 @@ void espSleep(int secs) {
 }
 
 void setup() {
-
+  int csize = sizeof(newline)+sizeof(version)+sizeof(firmware);
+  char firmwareVersion[50];
+  strlcpy(firmwareVersion, newline , csize);
+  strlcat(firmwareVersion, version , csize);
+  strlcat(firmwareVersion, firmware, csize);
   Serial.begin(115200);
+
   if (debugMode) {
-  display.init(115200);
+    display.init(115200);
+    Serial.println(firmwareVersion);
   } else {
     display.init();
   }
@@ -546,21 +556,19 @@ void setup() {
       char stRequest[urlSize];
       strcpy(stRequest, screenUrl);
       strlcat(stRequest, "/st", urlSize);
-      Serial.print("Service times:");
-      Serial.println(stRequest);
-
+      Serial.printf("Service times(ST) request: %s\n", stRequest);
       http.begin(stRequest);
       int httpCode = http.GET();
-      Serial.printf("Service times Response status:%d\n", httpCode);
+      Serial.printf("ST HTTP Response status code: %d\n", httpCode);
       
       if (httpCode > 0) { //Check for the returning code
           payload = http.getString();
-          Serial.println("Service Times: "+payload);
+          Serial.println("ST Response body: "+payload);
           if (payload == "0") {
             isOnServiceTime = false;
           }
           } else {
-          Serial.println("Error on HTTP request");
+          Serial.printf("ST: Error on HTTP request. Status: %d\n", httpCode);
         }
       http.end();
     #endif
