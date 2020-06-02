@@ -36,6 +36,8 @@ char version[13] = "CALE v1.0.1";
   #include <GxGDEW0213I5F/GxGDEW0213I5F.h>
   #elif defined(GDE0213B1)
   #include <GxGDE0213B1/GxGDE0213B1.h>
+  #elif defined(GDEH0213B73)
+  #include <GxGDEH0213B73/GxGDEH0213B73.h>
   #elif defined(GDEH0213B72)
   #include <GxGDEH0213B72/GxGDEH0213B72.h>
   #elif defined(GDEW0213Z16)
@@ -215,16 +217,6 @@ bool parsePathInformation(char *url, char **path, char *host, unsigned *host_len
   return false;
 }
 
-/**
- * Convert the internal IP to string
- */
-String IpAddress2String(const IPAddress& ipAddress)
-{
-  return String(ipAddress[0]) + String(".") +\
-  String(ipAddress[1]) + String(".") +\
-  String(ipAddress[2]) + String(".") +\
-  String(ipAddress[3]);
-}
 // Copied verbatim from gxEPD example (See platformio.ini)
 static const uint16_t input_buffer_pixels = 640; // may affect performance
 static const uint16_t max_palette_pixels = 256; // for depth <= 8
@@ -232,6 +224,17 @@ static const uint16_t max_palette_pixels = 256; // for depth <= 8
 uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
 uint8_t mono_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 b/w
 uint8_t color_palette_buffer[max_palette_pixels / 8]; // palette buffer for depth <= 8 c/w
+
+void espSleep(uint64_t seconds){
+      #ifdef ESP32
+        Serial.printf("Going to sleep %llu seconds\n", seconds);
+        esp_sleep_enable_timer_wakeup(seconds * USEC);
+        esp_deep_sleep_start();
+      #elif ESP8266
+        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
+        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
+      #endif
+}
 
 void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
 {
@@ -258,7 +261,7 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   }
 
 #ifdef ENABLE_INTERNAL_IP_LOG
-  String localIp = "ip="+IpAddress2String(WiFi.localIP());
+  String localIp = "ip="+WiFi.localIP().toString();
   request += "Content-Type: application/x-www-form-urlencoded\r\n";
   request += "Content-Length: "+ String(localIp.length())+"\r\n\r\n";
   request += localIp +"\r\n";
@@ -488,32 +491,10 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
   display.update();
   Serial.printf("display.update() render: %lu ms.\n", millis()-millisEnd);
 
-        display.powerDown();
-      delay(10);
-      #ifdef ESP32
-        Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
-        esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * USEC);
-        esp_deep_sleep_start();
-      #elif ESP8266
-        Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-        ESP.deepSleep(10800e6);  // 3600e6 = 1 hour in seconds / ESP.deepSleepMax()
-      #endif
+  espSleep(DEEPSLEEP_SECONDS);
 }
 
-void loop() {
-  delay(1);
-}
-
-void espSleep(int secs) {
-  #ifdef ESP32
-    Serial.printf("Going to sleep %d seconds\n", secs);
-    esp_sleep_enable_timer_wakeup(secs * USEC);
-    esp_deep_sleep_start();
-  #elif ESP8266
-    Serial.println("Going to sleep. Waking up only if D0 is connected to RST");
-    ESP.deepSleep(1800e6);
-  #endif
-}
+void loop() {}
 
 void setup() {
   int csize = sizeof(newline)+sizeof(version)+sizeof(firmware);
@@ -542,7 +523,6 @@ void setup() {
     delay(500);
     connectTries++;
   }
-
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(WiFi.localIP());
