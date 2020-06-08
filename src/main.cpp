@@ -13,8 +13,16 @@ char version[13] = "CALE v1.0.1";
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
   #include <DNSServer.h>
-  
 #endif
+#ifdef TINYPICO
+  #include <TinyPICO.h>
+  TinyPICO tp = TinyPICO();
+#endif
+float batteryVoltage = 0;
+// Partial update coordinates
+uint16_t partialupdate_y = 0;
+uint16_t partialupdate_x = 0;
+
 #include <WiFiClient.h>
 #include <SPI.h>
 #include <GxEPD.h>
@@ -476,6 +484,18 @@ void drawBitmapFrom_HTTP_ToBuffer(bool with_color)
     millisEnd = millis();
     Serial.printf("Bytes read: %lu BMP headers detected: %d ms. BMP total fetch: %d ms.  Total download: %d ms\n",
     bytes_read,millisBmp-millisIni, millisEnd-millisBmp, millisEnd-millisIni);
+
+    // Battery partial update only on boards that support reading battery voltage
+    // Remove all this TINYPICO part if you don't want the battery level to be displayed with a partial update
+    #ifdef TINYPICO
+      display.setFont(&FreeMonoBold12pt7b);
+      display.setCursor(partialupdate_x, partialupdate_y);
+      display.print("  "+String(batteryVoltage)+"v");
+      // NOTE: Even setting the x to the display.width() - 22, did not margin to the right
+      Serial.printf("Partial update. x: %d  y: %d\n", partialupdate_x, partialupdate_y);
+      display.updateWindow(partialupdate_x, partialupdate_y, 20, 10, true);
+    #endif
+
     break;
     }
   }
@@ -510,6 +530,19 @@ void setup() {
   } else {
     display.init();
   }
+    // Calculate bottom position for partial update. You may need to edit this to adjust to your display
+    if (eink_rotation == 0 || eink_rotation == 2) {
+      partialupdate_x = display.width()-20;
+      partialupdate_y = display.height()-30; // used for 7.5" 800x480
+    } else {
+      partialupdate_x = display.height()-20;
+      partialupdate_y = display.width()-20;
+    }
+  #ifdef TINYPICO
+    tp.DotStar_SetPower(false);
+    batteryVoltage = tp.GetBatteryVoltage();
+    Serial.printf("TINYPICO version. Battery: %.6f v showing it on partial update\n", batteryVoltage);
+  #endif
    
   display.setRotation(eink_rotation); // Rotates display N times clockwise
   display.setFont(&FreeMonoBold12pt7b);
