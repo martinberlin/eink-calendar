@@ -571,15 +571,15 @@ void button_handle(uint8_t gpio)
       }
       amplifierLow();
       #endif
-
       displayInit();
+      
         if (selectedScreen != 1) {
           // 3rd param: with_color (boolean)  Still untested!
            handleWebToDisplay(screen1, bearer1, false);
            selectedScreen = 1;
         }
         // Just uncomment this espressifSleep() if you want the T5 to be awake all the time (But be aware it takes about 35mA/hour)
-        espressifSleep();
+        //espressifSleep();
     }
     break;
 #endif
@@ -605,7 +605,7 @@ void button_handle(uint8_t gpio)
            handleWebToDisplay(screen2, bearer2, false);
            selectedScreen = 2;
         }
-        espressifSleep();
+        //espressifSleep();
     }
     break;
 #endif
@@ -673,7 +673,7 @@ void loop() {
 
   // Note: Enable deepsleep only as last step when all the rest is working as you expect
 #ifdef DEEPSLEEP_ENABLED
-  if (secondsToDeepsleep>SLEEP_AFTER_SECONDS) {
+  if ((secondsToDeepsleep/2)>SLEEP_AFTER_SECONDS) {
       display.powerDown();
 
       Serial.printf("Going to sleep %llu seconds\n", DEEPSLEEP_SECONDS);
@@ -681,9 +681,9 @@ void loop() {
       esp_deep_sleep_start();
   }
   secondsToDeepsleep++;
-  delay(1000);
+  delay(500);
   #endif
-  // In case of using a button to stream internet radio:
+  // In case of using a button to stream internet radio take out DEEPSLEEP_ENABLED definition and:
   /* if (playAudio) {
       if (mp3->isRunning()) {
         if (!mp3->loop()) {
@@ -708,7 +708,7 @@ void postSetup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("ONLINE: ");
     Serial.println(WiFi.localIP());
-    
+    #ifdef ENABLE_SOUNDS
     playMp3(voice_cale);
     while (1) {
       if (mp3->isRunning()) {
@@ -719,6 +719,7 @@ void postSetup() {
           }
     }
     amplifierLow();
+    #endif
     displayInit();
     handleWebToDisplay(screen1, bearer1, false);
   } else {
