@@ -2,6 +2,8 @@
 
 # CALE E-ink calendar
 
+This is based on esp32-arduino framework. There is an ESP-IDF framework version in [Cale-idf repository](https://github.com/martinberlin/cale-idf).
+
 ### A very easy and straight-forward E-Ink calendar
 
 The Android app that sends the configuration to the ESP32 Firmware using Bluetooth is now oficially the default way to set up your display. But we will always keep the possibility to have also a version that uses a [hardcoded C configuration](https://github.com/martinberlin/eink-calendar/tree/cale) since there are many use cases where the user does not have Android, or just wants to have a configuration like this per se, keeping in mind that ESP8266 has no bluetooth.
@@ -94,4 +96,6 @@ Amount of seconds that the ESP32 will deepsleep:
 ### Support CALE
 
 There are commercial solutions alike and they start up to 560€ for a Eink syncronized calendar (Check getjoan.com)
-If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end. 
+If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end.
+
+[Cale Firmware for ESP-IDF](https://github.com/martinberlin/cale-idf)
