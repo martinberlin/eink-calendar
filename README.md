@@ -92,10 +92,18 @@ Amount of seconds that the ESP32 will deepsleep:
 
     uint64_t DEEPSLEEP_SECONDS = 3600*1;
 
+### ESP-IDF version
+
+[Cale Firmware for ESP-IDF](https://github.com/martinberlin/cale-idf) No bluetooth config. This is a version though for Espressif IDF Framework users more geared to developers that want to make this Firmware their own or even implement only our epaper component and make their own program.
 
 ### Support CALE
 
 There are commercial solutions alike and they start up to 560€ for a Eink syncronized calendar (Check getjoan.com)
-If you use this commercially in your office we want to ask you about a small donation and to send us a short history of how it's working so we can give support. Please also file a Github issue in case you find a bug with detailed instructions so we can reproduce it in our end.
+If you like this Firmware please consider becoming a sponsor where you can donate as little as 2 u$ per month. Just click on:
+**❤ Sponsor**  on the top right
 
-[Cale Firmware for ESP-IDF](https://github.com/martinberlin/cale-idf)
+♢ For cryptocurrency users is also possible to help this project transferring Ethereum:
+
+0x68cEAB84F33776a7Fac977B2Bdc0D50933344086
+
+We are thankful for the support and contributions so far!
