@@ -1,4 +1,5 @@
 #include <Config.h>
+#include <Wire.h>
 #ifdef ESP32
   #include <WiFi.h>
   #include <ESPmDNS.h>
