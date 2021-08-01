@@ -94,7 +94,9 @@ Amount of seconds that the ESP32 will deepsleep:
 
 ### ESP-IDF version
 
-[Cale Firmware for ESP-IDF](https://github.com/martinberlin/cale-idf) No bluetooth config. This is a version though for Espressif IDF Framework users more geared to developers that want to make this Firmware their own or even implement only our epaper component and make their own program.
+[Cale Firmware for ESP-IDF](https://github.com/martinberlin/cale-idf) No bluetooth config with our own app so far.
+But there is a [WiFi provisioning example using ESP-RainMaker](https://github.com/martinberlin/cale-idf/tree/feature/42-wifi-provisioning) (needs PSRAM). This is a version thought for Espressif IDF Framework users more geared to developers that want to make this Firmware their own or even implement only our epaper component and make their own program.
+In the latest months most of our development efforts land in the Espressif IDF framework version of the Firmware.
 
 ### Support CALE
 
