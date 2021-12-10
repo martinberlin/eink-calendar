@@ -12,11 +12,10 @@
 #include <HTTPClient.h>
 #include <GxEPD.h>
 #include "BluetoothSerial.h"
-// Uncomment only if Tinypico.com is used to consume less turning off the Pixel star LED
-//#include <TinyPICO.h>
 
 Preferences preferences;
 #ifdef TINYPICO
+  #include <TinyPICO.h>
   TinyPICO tp = TinyPICO();
 #endif
 float batteryVoltage = 0;
