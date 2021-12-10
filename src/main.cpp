@@ -12,7 +12,8 @@
 #include <HTTPClient.h>
 #include <GxEPD.h>
 #include "BluetoothSerial.h"
-#include <TinyPICO.h>
+// Uncomment only if Tinypico.com is used to consume less turning off the Pixel star LED
+//#include <TinyPICO.h>
 
 Preferences preferences;
 #ifdef TINYPICO
@@ -26,7 +27,9 @@ StaticJsonDocument<900> jsonBuffer;
 // DEBUG_MODE is compiled now and cannot be changed on runtime (Check lib/Config)
 String screenUrl;
 String bearer;
+
 // Get the right interface for the display
+// Feel free to add more includes if your Model is not there
 #ifdef GDEW042T2
   #include <GxGDEW042T2/GxGDEW042T2.h>
   #elif defined(GDEW075T8)
