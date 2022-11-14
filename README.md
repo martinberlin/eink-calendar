@@ -4,6 +4,15 @@
 
 This is based on esp32-arduino framework. There is an ESP-IDF framework version in [Cale-idf repository](https://github.com/martinberlin/cale-idf).
 
+IMPORTANT: Since 2 years we are developing our own epaper component for ESP32 called [CalEPD](https://github.com/martinberlin/CalEPD). Because of our limited time and resources, this repository is falling behind for new updates, so we recommend that you try our new component.
+
+We know some developers are reluctant to move to a new framework. But we find ESP-IDF the best solution to build and flash our ESP32's and we are confident that you will find **CalEPD** a faster component, way easier and cleaner, than GxEPD.
+
+### VSCODE and Platformio ★
+
+In the repository [cale-platformio](https://github.com/martinberlin/cale-platformio) you can have a quick start skeleton to use CalEPD and Adafruit-GFX components, along with optional FocalTech touch I2C. Please be aware that there are some corrections to do by hand until we figure out what is the best way to do it. Read those in the WiKi and please give a **★ to the cale-platformio** repository if you find it useful
+
+
 ### A very easy and straight-forward E-Ink calendar
 
 The Android app that sends the configuration to the ESP32 Firmware using Bluetooth is now oficially the default way to set up your display. But we will always keep the possibility to have also a version that uses a [hardcoded C configuration](https://github.com/martinberlin/eink-calendar/tree/cale) since there are many use cases where the user does not have Android, or just wants to have a configuration like this per se, keeping in mind that ESP8266 has no bluetooth.
